@@ -59,7 +59,7 @@ const ProjectModal = ({ isOpen, onClose, projectUrl, sponsorUrl }) => {
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-full border border-zinc-800 px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 transition-colors hover:border-zinc-700 hover:text-zinc-200 select-none"
+                className="rounded-full border border-zinc-800 px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 transition-colors hover:border-zinc-700 hover:text-zinc-200 cursor-pointer select-none"
               >
                 Close
               </button>

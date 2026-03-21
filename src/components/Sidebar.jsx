@@ -1,24 +1,39 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { LayoutGrid, FileText, Settings, Download, Plus, User } from 'lucide-react'
+import { useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { LayoutGrid, Settings, Download, Plus, Info } from 'lucide-react'
 
 const sidebarItems = [
   { id: 'add', icon: Plus, label: 'Add Section', action: 'add' },
   { id: 'templates', icon: LayoutGrid, label: 'Templates', action: 'templates' },
   { id: 'settings', icon: Settings, label: 'Settings', action: 'settings' },
   { id: 'export', icon: Download, label: 'Export', action: 'export' },
-  { id: 'about', icon: User, label: 'About', action: 'about' },
+  { id: 'about', icon: Info, label: 'About', action: 'about' },
 ]
 
 const Sidebar = ({ activePanel, onPanelChange }) => {
   const navigate = useNavigate()
+  const location = useLocation()
+  const pendingKey = 'branreadme:pendingPanel'
+
+  useEffect(() => {
+    if (location.pathname !== '/') return
+    const pending = window.sessionStorage.getItem(pendingKey)
+    if (!pending) return
+    window.sessionStorage.removeItem(pendingKey)
+    onPanelChange(pending)
+  }, [location.pathname, onPanelChange])
 
   const handlePanelChange = (action) => {
     if (action === 'about') {
-      navigate('/about')
+      onPanelChange(action)
+      if (location.pathname !== '/about') {
+        navigate('/about')
+      }
     } else {
-      if (window.location.pathname !== '/') {
+      if (location.pathname !== '/') {
+        window.sessionStorage.setItem(pendingKey, action)
         navigate('/')
+        return
       }
       onPanelChange(action)
     }
@@ -26,23 +41,7 @@ const Sidebar = ({ activePanel, onPanelChange }) => {
 
   return (
     <aside
-      style={{
-        width: '48px',
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        paddingTop: '16px',
-        gap: '4px',
-        background: 'rgba(24, 24, 27, 0.75)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        borderRight: '1px solid var(--border-default)',
-        position: 'fixed',
-        left: 0,
-        top: 0,
-        zIndex: 40,
-      }}
+      className="fixed left-0 top-0 z-40 flex h-screen w-12 flex-col items-center gap-1 border-r border-zinc-800/50 bg-zinc-900/75 pt-4 backdrop-blur-2xl"
     >
       {/* Logo mark */}
       <div
@@ -66,49 +65,22 @@ const Sidebar = ({ activePanel, onPanelChange }) => {
       {sidebarItems.map((item) => {
         const Icon = item.icon
         const isActive = activePanel === item.action
+          || (item.action === 'about' && location.pathname === '/about')
         return (
           <button
             key={item.id}
             onClick={() => handlePanelChange(item.action)}
             title={item.label}
             aria-label={item.label}
-            style={{
-              width: '36px',
-              height: '36px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: 'var(--radius-md)',
-              border: 'none',
-              cursor: 'pointer',
-              transition: 'all 150ms ease',
-              background: isActive ? 'var(--accent-muted)' : 'transparent',
-              color: isActive ? 'var(--accent)' : 'var(--text-muted)',
-              position: 'relative',
-            }}
-            onMouseEnter={(e) => {
-              if (!isActive) {
-                e.currentTarget.style.background = 'var(--bg-elevated)'
-                e.currentTarget.style.color = 'var(--text-secondary)'
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isActive) {
-                e.currentTarget.style.background = 'transparent'
-                e.currentTarget.style.color = 'var(--text-muted)'
-              }
-            }}
+            className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-150 ${
+              isActive 
+                ? 'bg-blue-500/10 text-blue-500' 
+                : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300'
+            }`}
           >
             {isActive && (
               <span
-                style={{
-                  position: 'absolute',
-                  left: '-6px',
-                  width: '3px',
-                  height: '16px',
-                  borderRadius: '0 2px 2px 0',
-                  background: 'var(--accent)',
-                }}
+                className="absolute -left-1.5 h-4 w-0.75 rounded-r-sm bg-blue-500"
               />
             )}
             <Icon size={18} />
