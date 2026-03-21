@@ -4,7 +4,14 @@ import Sidebar from '../components/Sidebar'
 import ProjectModal from '../components/ProjectModal'
 
 const Home = () => {
-  const [activePanel, setActivePanel] = useState('add')
+  const [activePanel, setActivePanel] = useState(() => {
+    const pendingKey = 'branreadme:pendingPanel'
+    if (typeof window === 'undefined') return 'add'
+    const pending = window.sessionStorage.getItem(pendingKey)
+    if (!pending) return 'add'
+    window.sessionStorage.removeItem(pendingKey)
+    return pending
+  })
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false)
 
   const projectUrl = 'https://github.com/BrandonBlkk/bran-readme'

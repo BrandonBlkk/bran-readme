@@ -1,24 +1,39 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { LayoutGrid, FileText, Settings, Download, Plus, User } from 'lucide-react'
+import { useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { LayoutGrid, Settings, Download, Plus, Info } from 'lucide-react'
 
 const sidebarItems = [
   { id: 'add', icon: Plus, label: 'Add Section', action: 'add' },
   { id: 'templates', icon: LayoutGrid, label: 'Templates', action: 'templates' },
   { id: 'settings', icon: Settings, label: 'Settings', action: 'settings' },
   { id: 'export', icon: Download, label: 'Export', action: 'export' },
-  { id: 'about', icon: User, label: 'About', action: 'about' },
+  { id: 'about', icon: Info, label: 'About', action: 'about' },
 ]
 
 const Sidebar = ({ activePanel, onPanelChange }) => {
   const navigate = useNavigate()
+  const location = useLocation()
+  const pendingKey = 'branreadme:pendingPanel'
+
+  useEffect(() => {
+    if (location.pathname !== '/') return
+    const pending = window.sessionStorage.getItem(pendingKey)
+    if (!pending) return
+    window.sessionStorage.removeItem(pendingKey)
+    onPanelChange(pending)
+  }, [location.pathname, onPanelChange])
 
   const handlePanelChange = (action) => {
     if (action === 'about') {
-      navigate('/about')
+      onPanelChange(action)
+      if (location.pathname !== '/about') {
+        navigate('/about')
+      }
     } else {
-      if (window.location.pathname !== '/') {
+      if (location.pathname !== '/') {
+        window.sessionStorage.setItem(pendingKey, action)
         navigate('/')
+        return
       }
       onPanelChange(action)
     }
@@ -30,15 +45,19 @@ const Sidebar = ({ activePanel, onPanelChange }) => {
     >
       {/* Logo mark */}
       <div
-        className="mb-4 flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-blue-500/20 bg-blue-500/10"
-        onClick={() => navigate('/')}
+        className="mb-4 flex h-8 w-8 items-center justify-center rounded-lg cursor-pointer"
       >
-        <FileText size={16} className="text-blue-500" />
+        <img
+          src="/logo.svg"
+          alt="Profile"
+          className="h-5 w-5 rounded-full select-none"
+        />
       </div>
 
       {sidebarItems.map((item) => {
         const Icon = item.icon
         const isActive = activePanel === item.action
+          || (item.action === 'about' && location.pathname === '/about')
         return (
           <button
             key={item.id}
@@ -53,7 +72,7 @@ const Sidebar = ({ activePanel, onPanelChange }) => {
           >
             {isActive && (
               <span
-                className="absolute -left-1.5 h-4 w-[3px] rounded-r-sm bg-blue-500"
+                className="absolute -left-1.5 h-4 w-0.75 rounded-r-sm bg-blue-500"
               />
             )}
             <Icon size={18} />
