@@ -45,13 +45,21 @@ const Sidebar = ({ activePanel, onPanelChange }) => {
     >
       {/* Logo mark */}
       <div
-        className="mb-4 flex h-8 w-8 items-center justify-center rounded-lg cursor-pointer"
+        style={{
+          width: '32px',
+          height: '32px',
+          borderRadius: 'var(--radius-md)',
+          background: 'var(--accent-muted)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: '16px',
+          border: '1px solid rgba(59,130,246,0.2)',
+          cursor: 'pointer'
+        }}
+        onClick={() => navigate('/')}
       >
-        <img
-          src="/logo.svg"
-          alt="Profile"
-          className="h-5 w-5 rounded-full select-none"
-        />
+        <FileText size={16} style={{ color: 'var(--accent)' }} />
       </div>
 
       {sidebarItems.map((item) => {
