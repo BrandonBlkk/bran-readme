@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+﻿import React, { useMemo, useState } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import {
@@ -32,18 +32,10 @@ import {
   FileText,
   Sparkles,
 } from 'lucide-react'
-import {
-  siReact,
-  siTypescript,
-  siJavascript,
-  siTailwindcss,
-  siVite,
-  siNodedotjs,
-  siPostgresql,
-  siMongodb,
-  siDocker,
-  siGithub,
-} from 'simple-icons/icons'
+import { techData } from '../utils/tech-data'
+
+const FALLBACK_ICON =
+  'data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"%23999\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"4\"/><path d=\"M8 12h8\"/></svg>'
 
 /* ── Helpers ───────────────────────────────────────── */
 const createId = () => {
@@ -170,14 +162,10 @@ const useSectionStore = create(
 )
 
 /* ── Tech Icons ────────────────────────────────────── */
-const TECH_OPTIONS = [
-  siReact, siTypescript, siJavascript, siTailwindcss, siVite,
-  siNodedotjs, siPostgresql, siMongodb, siDocker, siGithub,
-].map((icon) => ({
-  title: icon.title,
+const TECH_OPTIONS = techData.map((icon) => ({
+  title: icon.name,
   slug: icon.slug,
-  hex: `#${icon.hex}`,
-  path: icon.path,
+  category: icon.category,
 }))
 
 const TECH_ICON_MAP = TECH_OPTIONS.reduce((acc, icon) => {
@@ -233,14 +221,17 @@ const headerBlock = (c) => {
 const statsBlock = (c) => `## Stats\n\n![GitHub Stats](${buildStatsUrl(c)})`
 
 const skillsBlock = (c) => {
-  const items = (c.items ?? []).map((slug) => TECH_ICON_MAP[slug]).filter(Boolean)
+  const items = (c.items ?? [])
+    .map((slug) => TECH_ICON_MAP[slug] ?? { title: slug, slug })
+    .filter(Boolean)
   if (!items.length) return '## Tech Stack\n\nAdd your tech stack icons.'
-  const size = c.iconSize ?? 32
   const icons = items
-    .map(
-      (icon) =>
-        `<img src="https://cdn.simpleicons.org/${icon.slug}/${sanitizeHex(icon.hex)}" alt="${icon.title}" />`,
-    )
+    .map((icon) => {
+      const src = icon.slug
+        ? `https://cdn.simpleicons.org/${icon.slug}`
+        : FALLBACK_ICON
+      return `<img src="${src}" alt="${icon.title}" />`
+    })
     .join(' ')
   return `## Tech Stack\n\n${icons}`
 }
@@ -714,7 +705,33 @@ const SkillsEditor = ({ section }) => {
   const updateSection = useSectionStore((s) => s.updateSection)
   const c = section.content ?? {}
   const selected = new Set(c.items ?? [])
-  const iconSize = c.iconSize ?? 32
+  const [query, setQuery] = useState('')
+  const [activeCategory, setActiveCategory] = useState('All')
+  const [page, setPage] = useState(1)
+
+  const categories = useMemo(() => {
+    const set = new Set(
+      TECH_OPTIONS.map((icon) => icon.category).filter(Boolean),
+    )
+    return ['All', ...Array.from(set).sort()]
+  }, [])
+
+  const filteredOptions = useMemo(() => {
+    const term = query.trim().toLowerCase()
+    return TECH_OPTIONS.filter((icon) => {
+      const matchesQuery = term
+        ? `${icon.title} ${icon.slug} ${icon.category}`.toLowerCase().includes(term)
+        : true
+      const matchesCategory = activeCategory === 'All' || icon.category === activeCategory
+      return matchesQuery && matchesCategory
+    })
+  }, [query, activeCategory])
+
+  const PAGE_SIZE = 24
+  const totalPages = Math.max(1, Math.ceil(filteredOptions.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const startIndex = (currentPage - 1) * PAGE_SIZE
+  const visibleOptions = filteredOptions.slice(startIndex, startIndex + PAGE_SIZE)
 
   const toggleSkill = (slug) => {
     const next = new Set(selected)
@@ -725,9 +742,51 @@ const SkillsEditor = ({ section }) => {
 
   return (
     <div style={{ display: 'grid', gap: '16px' }}>
-      <RangeField label="Icon Size" min={18} max={40} value={iconSize} onChange={(v) => updateSection(section.id, { iconSize: v })} />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
-        {TECH_OPTIONS.map((icon) => {
+      <RangeField label="Icon Size" min={18} max={40} value={c.iconSize ?? 32} onChange={(v) => updateSection(section.id, { iconSize: v })} />
+      <Field label="Search Tech">
+        <input
+          style={inputStyle}
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value)
+            setPage(1)
+          }}
+          placeholder="Search by name, slug, or category"
+          {...inputFocusProps}
+        />
+      </Field>
+      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        {categories.map((category) => {
+          const isActive = activeCategory === category
+          return (
+            <button
+              key={category}
+              type="button"
+              onClick={() => {
+                setActiveCategory(category)
+                setPage(1)
+              }}
+              style={{
+                padding: '6px 10px',
+                fontSize: '11px',
+                fontWeight: 600,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                borderRadius: '9999px',
+                border: `1px solid ${isActive ? 'var(--accent)' : 'var(--border-default)'}`,
+                background: isActive ? 'var(--accent-muted)' : 'var(--bg-base)',
+                color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                cursor: 'pointer',
+                transition: 'all 150ms ease',
+              }}
+            >
+              {category}
+            </button>
+          )
+        })}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px' }}>
+        {visibleOptions.map((icon) => {
           const isActive = selected.has(icon.slug)
           return (
             <button
@@ -736,12 +795,12 @@ const SkillsEditor = ({ section }) => {
               onClick={() => toggleSkill(icon.slug)}
               style={{
                 display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 10px',
-                fontSize: '12px',
+                flexDirection: 'column',
+                gap: '6px',
+                padding: '10px',
+                fontSize: '11px',
                 fontFamily: 'var(--font-sans)',
-                textAlign: 'left',
+                textAlign: 'center',
                 borderRadius: 'var(--radius-md)',
                 border: `1px solid ${isActive ? 'var(--accent)' : 'var(--border-default)'}`,
                 background: isActive ? 'var(--accent-muted)' : 'var(--bg-base)',
@@ -749,14 +808,65 @@ const SkillsEditor = ({ section }) => {
                 cursor: 'pointer',
                 transition: 'all 150ms ease',
               }}
+              title={`${icon.title} · ${icon.category}`}
             >
-              <svg viewBox="0 0 24 24" style={{ width: '16px', height: '16px', fill: icon.hex, flexShrink: 0 }} role="img" aria-label={icon.title}>
-                <path d={icon.path} />
-              </svg>
+              <img
+                src={`https://cdn.simpleicons.org/${icon.slug}`}
+                alt={icon.title}
+                style={{ width: '26px', height: '26px', alignSelf: 'center' }}
+                loading="lazy"
+                onError={(e) => {
+                  e.currentTarget.src = FALLBACK_ICON
+                }}
+              />
               <span>{icon.title}</span>
             </button>
           )
         })}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <p style={{ fontSize: '11px', color: 'var(--text-faint)' }}>
+          Showing {visibleOptions.length} of {filteredOptions.length}
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button
+            type="button"
+            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+            disabled={currentPage <= 1}
+            style={{
+              padding: '4px 10px',
+              fontSize: '11px',
+              borderRadius: '9999px',
+              border: '1px solid var(--border-default)',
+              background: 'var(--bg-base)',
+              color: 'var(--text-secondary)',
+              opacity: currentPage <= 1 ? 0.5 : 1,
+              cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
+            }}
+          >
+            Prev
+          </button>
+          <span style={{ fontSize: '11px', color: 'var(--text-faint)' }}>
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+            disabled={currentPage >= totalPages}
+            style={{
+              padding: '4px 10px',
+              fontSize: '11px',
+              borderRadius: '9999px',
+              border: '1px solid var(--border-default)',
+              background: 'var(--bg-base)',
+              color: 'var(--text-secondary)',
+              opacity: currentPage >= totalPages ? 0.5 : 1,
+              cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
+            }}
+          >
+            Next
+          </button>
+        </div>
       </div>
     </div>
   )
