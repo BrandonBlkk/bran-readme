@@ -1,6 +1,5 @@
 import React from 'react'
 import Sidebar from '../components/Sidebar'
-import Footer from '../components/Footer'
 import { Info, Layout, Zap, Shield, Github, ExternalLink } from 'lucide-react'
 
 const About = () => {
@@ -112,7 +111,6 @@ const About = () => {
             </a>
           </div>
         </div>
-        <Footer />
       </div>
     </div>
   )
