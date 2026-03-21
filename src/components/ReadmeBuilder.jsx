@@ -973,7 +973,7 @@ const GithubModeToggle = () => {
 }
 
 /* ── Main Component ────────────────────────────────── */
-const ReadmeBuilder = ({ activePanel }) => {
+const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
   const sections = useSectionStore((s) => s.sections)
   const previewTheme = useSectionStore((s) => s.previewTheme)
   const addSection = useSectionStore((s) => s.addSection)
@@ -1034,7 +1034,11 @@ const ReadmeBuilder = ({ activePanel }) => {
 
   return (
     <div className="flex flex-1 flex-col">
-      <Navbar onReset={handleResetDefaults} onCopy={handleCopyMarkdown} />
+      <Navbar
+        onReset={handleResetDefaults}
+        onCopy={handleCopyMarkdown}
+        onOpenProjectModal={onOpenProjectModal}
+      />
 
       <div
         className="grid min-h-0 flex-1 grid-cols-[400px_1fr]"

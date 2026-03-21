@@ -1,7 +1,8 @@
 import { Copy, RotateCcw } from 'lucide-react'
-import { useState } from 'react';
+import { useState } from 'react'
+import profileImage from '../assets/images/Profile.png'
 
-const Navbar = ({ onReset, onCopy }) => {
+const Navbar = ({ onReset, onCopy, onOpenProjectModal }) => {
   const [isBeta, setIsBeta] = useState(true);
   const [isRotating, setIsRotating] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
@@ -36,6 +37,23 @@ const Navbar = ({ onReset, onCopy }) => {
         }
       </div>
 
+      <button
+        type="button"
+        onClick={onOpenProjectModal}
+        className="ml-2 flex items-center gap-2 border-l border-zinc-800 pl-3 text-[11px] font-medium uppercase tracking-[0.08em] text-zinc-500 transition-colors duration-150 hover:text-rose-300 cursor-pointer"
+        aria-haspopup="dialog"
+      >
+        <span>Built by</span>
+        <span className="flex items-center gap-1.5 text-zinc-50">
+          <img
+            src={profileImage}
+            alt="Profile"
+            className="h-4 w-4 rounded-full select-none"
+          />
+          Brandon
+        </span>
+      </button>
+
       <div className="flex items-center gap-2 select-none">
         <button
           type="button"
@@ -61,6 +79,7 @@ const Navbar = ({ onReset, onCopy }) => {
           Copy Markdown
         </button>
       </div>
+
     </header>
   )
 }
