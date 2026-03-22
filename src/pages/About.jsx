@@ -9,10 +9,10 @@ const About = () => {
     <div className="flex h-screen overflow-hidden bg-zinc-950 font-sans text-zinc-50 antialiased selection:bg-blue-500 selection:text-white">
       <Sidebar activePanel="about" onPanelChange={() => {}} />
 
-      <div className="ml-12 flex h-screen min-h-0 flex-1 flex-col overflow-y-auto">
-        <div className="mx-auto w-full max-w-4xl px-10 py-5">
+      <div className="ml-0 lg:ml-12 flex h-screen min-h-0 flex-1 flex-col overflow-y-auto">
+        <div className="mx-auto w-full max-w-4xl px-4 py-5 lg:px-10">
           <div className="space-y-3">
-            <header className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8 shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+            <header className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.35)] lg:p-8">
               <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500 select-none">
                 <span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-blue-400">
                   About
@@ -21,10 +21,10 @@ const About = () => {
                   Generator {currentYear}
                 </span>
               </div>
-              <h1 className="mt-4 text-3xl font-semibold text-zinc-50">
+              <h1 className="mt-4 text-2xl font-semibold text-zinc-50 sm:text-3xl">
                 About BranReadme
               </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-400">
+              <p className="mt-3 max-w-2xl text-xs leading-relaxed text-zinc-400 sm:text-sm">
                 BranReadme helps developers craft professional GitHub README files fast — with a
                 drag-and-drop builder, real-time preview, and export-ready markdown.
               </p>
@@ -33,26 +33,26 @@ const About = () => {
                   href="https://github.com/BrandonBlkk/bran-readme"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 rounded-lg border border-blue-500 bg-blue-500 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-blue-600"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-blue-500 bg-blue-500 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-blue-600 sm:flex-none"
                 >
                   <Github size={14} />
-                  <span>Project GitHub</span>
+                  <span>GitHub</span>
                   <ExternalLink size={12} />
                 </a>
                 <a
                   href="https://github.com/BrandonBlkk/bran-readme/stargazers"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-2 text-xs font-semibold text-zinc-200 transition-all hover:border-zinc-700 hover:bg-[#1e1e22]"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-2 text-xs font-semibold text-zinc-200 transition-all hover:border-zinc-700 hover:bg-[#1e1e22] sm:flex-none"
                 >
                   <Zap size={14} className="text-blue-400" />
-                  <span>Star the Project</span>
+                  <span>Star Project</span>
                 </a>
               </div>
             </header>
 
-            <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-7">
-              <h2 className="mb-5 flex items-center gap-3 text-base font-semibold">
+            <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 lg:p-7">
+              <h2 className="mb-5 flex items-center gap-3 text-sm font-semibold sm:text-base">
                 <Info size={18} className="text-blue-400" />
                 What You Can Do
               </h2>
@@ -91,18 +91,17 @@ const About = () => {
               </div>
             </section>
 
-            <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-7">
-              <h2 className="mb-3 text-base font-semibold text-zinc-50">Mission</h2>
+            <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 sm:p-7">
+              <h2 className="mb-3 text-sm font-semibold text-zinc-50 sm:text-base">Mission</h2>
               <p className="text-xs leading-relaxed text-zinc-400">
-                In {currentYear}, we want every project to ship with clear documentation. BranReadme removes the
-                busywork so you can focus on building great software — and share templates that
-                help others do the same.
+                In {currentYear}, your GitHub profile is your digital resume. BranReadme removes the
+                tedious manual markdown coding so you can focus on showcasing your skills and 
+                personality — and share unique profile layouts that help the community stand out.
               </p>
             </section>
 
-            {/* Added Footer Section for the Year */}
             <footer className="py-6 text-center">
-              <p className="text-[10px] uppercase tracking-widest text-zinc-600">
+              <p className="text-[9px] uppercase tracking-widest text-zinc-600 sm:text-[10px] mb-12 lg:mb-0">
                 © {currentYear} BranReadme • Built for the Open Source Community
               </p>
             </footer>
