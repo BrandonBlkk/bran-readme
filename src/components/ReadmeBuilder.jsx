@@ -983,6 +983,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
 
   const markdown = useMemo(() => generateMarkdown(sections), [sections])
   const [activeId, setActiveId] = useState(null)
+  const [isEditorOpen, setIsEditorOpen] = useState(false)
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   )
@@ -1045,9 +1046,19 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
       >
         {/* ── Builder Column ─────────────────── */}
         <div
-          className="relative border-b border-zinc-800 lg:sticky lg:top-12.25 lg:h-[calc(100vh-49px)] lg:overflow-y-auto lg:border-b-0 lg:border-r [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-[3px] [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-track]:bg-transparent hover:[&::-webkit-scrollbar-thumb]:bg-zinc-700"
+          className={`relative border-b border-zinc-800 ${isEditorOpen ? 'block' : 'hidden'} lg:block lg:sticky lg:top-12.25 lg:h-[calc(100vh-49px)] lg:overflow-y-auto lg:border-b-0 lg:border-r [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-[3px] [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-track]:bg-transparent hover:[&::-webkit-scrollbar-thumb]:bg-zinc-700`}
         >
           <div className="p-4 sm:p-5">
+            <div className="mb-4 flex items-center justify-between lg:hidden">
+              <span className={labelClass}>Template Editor</span>
+              <button
+                type="button"
+                onClick={() => setIsEditorOpen(false)}
+                className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 transition-all duration-150 hover:border-zinc-700 hover:text-zinc-300 cursor-pointer select-none"
+              >
+                Back to Preview
+              </button>
+            </div>
             {/* Add Section Panel */}
             <div className="mb-5">
               <div className="mb-3">
@@ -1144,7 +1155,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
 
         {/* ── Preview Column ─────────────────── */}
         <div
-          className="relative bg-zinc-950 lg:sticky lg:top-12.25 lg:h-[calc(100vh-49px)] lg:overflow-y-auto [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-[3px] [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-track]:bg-transparent hover:[&::-webkit-scrollbar-thumb]:bg-zinc-700"
+          className={`relative bg-zinc-950 ${isEditorOpen ? 'hidden' : 'block'} lg:block lg:sticky lg:top-12.25 lg:h-[calc(100vh-49px)] lg:overflow-y-auto [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-[3px] [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-track]:bg-transparent hover:[&::-webkit-scrollbar-thumb]:bg-zinc-700`}
         >
           <div className="p-4 sm:p-5">
             {/* Preview Header */}
@@ -1156,7 +1167,16 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
                 <span className={labelClass}>Preview</span>
                 <span className="text-[11px] text-zinc-600">· Live</span>
               </div>
-              <GithubModeToggle />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditorOpen(true)}
+                  className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 transition-all duration-150 hover:border-zinc-700 hover:text-zinc-300 cursor-pointer select-none lg:hidden"
+                >
+                  Edit Template
+                </button>
+                <GithubModeToggle />
+              </div>
             </div>
 
             {/* Preview Pane */}
