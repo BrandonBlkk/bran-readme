@@ -21,17 +21,17 @@ const Navbar = ({ onReset, onCopy, onOpenProjectModal }) => {
 
   return (
     <header
-      className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-zinc-800 bg-zinc-900/75 px-6 py-3 backdrop-blur-lg"
+      className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-zinc-800 bg-zinc-900/75 px-3 py-2 backdrop-blur-lg sm:flex-nowrap sm:gap-4 sm:px-6 sm:py-3"
     >
       <div className="flex items-center gap-3">
         <h1 className="text-sm font-semibold tracking-[-0.01em] text-zinc-50">
           BranReadme
         </h1>
         { isBeta ?
-          <span className="rounded-full border border-rose-800 bg-zinc-900 px-2 py-0.5 text-[11px] font-medium text-rose-400">
+          <span className="rounded-full border border-rose-800 bg-zinc-900 px-2 py-0.5 text-[11px] font-medium text-rose-400 select-none">
             Beta
           </span> :
-          <span className="rounded-full border border-zinc-600 bg-zinc-900 px-2 py-0.5 text-[11px] font-medium text-zinc-400">
+          <span className="rounded-full border border-zinc-600 bg-zinc-900 px-2 py-0.5 text-[11px] font-medium text-zinc-400 select-none">
             v1.0
           </span>
         }
@@ -40,7 +40,7 @@ const Navbar = ({ onReset, onCopy, onOpenProjectModal }) => {
       <button
         type="button"
         onClick={onOpenProjectModal}
-        className="ml-2 flex items-center gap-2 border-l border-zinc-800 pl-3 text-[11px] font-medium uppercase tracking-[0.08em] text-zinc-500 transition-colors duration-150 hover:text-rose-300 cursor-pointer"
+        className="flex items-center gap-2 rounded-md border border-zinc-800/70 bg-zinc-950/50 px-2 py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-zinc-500 transition-colors duration-150 hover:text-rose-300 cursor-pointer sm:ml-2 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:border-l sm:border-zinc-800 sm:pl-3"
         aria-haspopup="dialog"
       >
         <span>Built by</span>
@@ -54,11 +54,11 @@ const Navbar = ({ onReset, onCopy, onOpenProjectModal }) => {
         </span>
       </button>
 
-      <div className="flex items-center gap-2 select-none">
+      <div className="flex flex-wrap items-center gap-2 select-none sm:flex-nowrap sm:justify-end">
         <button
           type="button"
           onClick={handleResetClick}
-          className="flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-400 transition-all duration-150 hover:border-zinc-700 hover:text-zinc-50 cursor-pointer"
+          className="flex items-center justify-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-xs font-medium text-zinc-400 transition-all duration-150 hover:border-zinc-700 hover:text-zinc-50 cursor-pointer sm:px-3 sm:py-1.5"
         >
           <RotateCcw 
             size={13} 
@@ -70,7 +70,7 @@ const Navbar = ({ onReset, onCopy, onOpenProjectModal }) => {
         <button
           type="button"
           onClick={handleCopyClick}
-          className="flex items-center gap-1.5 rounded-lg border border-rose-600 bg-rose-600 px-3 py-1.5 text-xs font-medium text-white transition-all duration-150 hover:border-rose-500 hover:bg-rose-500 cursor-pointer"
+          className="flex items-center justify-center gap-1.5 rounded-lg border border-rose-600 bg-rose-600 px-2.5 py-1 text-xs font-medium text-white transition-all duration-150 hover:border-rose-500 hover:bg-rose-500 cursor-pointer sm:px-3 sm:py-1.5"
         >
           <Copy 
             size={13} 

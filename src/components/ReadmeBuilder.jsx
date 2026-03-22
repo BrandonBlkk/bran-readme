@@ -677,7 +677,7 @@ const SkillsEditor = ({ section }) => {
           )
         })}
       </div>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {visibleOptions.map((icon) => {
           const isActive = selected.has(icon.slug)
           return (
@@ -847,18 +847,18 @@ const Preview = ({ markdown, previewTheme }) => {
   const components = {
     h1: (props) => (
       <h1
-        className={`mb-4 border-b pb-[0.3em] text-[32px] font-semibold ${isDark ? 'border-[#30363d]' : 'border-[#d0d7de]'}`}
+        className={`mb-4 border-b pb-[0.3em] text-[26px] font-semibold sm:text-[28px] md:text-[32px] ${isDark ? 'border-[#30363d]' : 'border-[#d0d7de]'}`}
         {...props}
       />
     ),
     h2: (props) => (
       <h2
-        className={`mb-4 mt-6 border-b pb-[0.3em] text-[24px] font-semibold ${isDark ? 'border-[#30363d]' : 'border-[#d0d7de]'}`}
+        className={`mb-4 mt-6 border-b pb-[0.3em] text-[20px] font-semibold sm:text-[22px] md:text-[24px] ${isDark ? 'border-[#30363d]' : 'border-[#d0d7de]'}`}
         {...props}
       />
     ),
     h3: (props) => (
-      <h3 className="mb-4 mt-6 text-[20px] font-semibold" {...props} />
+      <h3 className="mb-4 mt-6 text-[18px] font-semibold sm:text-[19px] md:text-[20px]" {...props} />
     ),
     p: (props) => {
       const children = React.Children.toArray(props.children)
@@ -915,8 +915,8 @@ const Preview = ({ markdown, previewTheme }) => {
     <div
       className={`w-full max-w-220 rounded-xl border ${theme.container} shadow-[0_4px_12px_rgba(0,0,0,0.5)]`}
     >
-      <div className="px-10 py-8">
-        <div className="wrap-break-word text-base leading-normal font-['-apple-system', BlinkMacSystemFont,'Segoe_UI','Noto_Sans',Helvetica,Arial,sans-serif]">
+      <div className="px-4 py-5 sm:px-6 md:px-10 md:py-8">
+        <div className="wrap-break-word text-sm leading-normal sm:text-base font-['-apple-system', BlinkMacSystemFont,'Segoe_UI','Noto_Sans',Helvetica,Arial,sans-serif]">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeRaw]}
@@ -1041,13 +1041,13 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
       />
 
       <div
-        className="grid min-h-0 flex-1 grid-cols-[400px_1fr]"
+        className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[400px_1fr]"
       >
         {/* ── Builder Column ─────────────────── */}
         <div
-          className="sticky top-12.25 h-[calc(100vh-49px)] overflow-y-auto border-r border-zinc-800 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-[3px] [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-track]:bg-transparent hover:[&::-webkit-scrollbar-thumb]:bg-zinc-700"
+          className="relative border-b border-zinc-800 lg:sticky lg:top-12.25 lg:h-[calc(100vh-49px)] lg:overflow-y-auto lg:border-b-0 lg:border-r [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-[3px] [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-track]:bg-transparent hover:[&::-webkit-scrollbar-thumb]:bg-zinc-700"
         >
-          <div className="p-5">
+          <div className="p-4 sm:p-5">
             {/* Add Section Panel */}
             <div className="mb-5">
               <div className="mb-3">
@@ -1144,12 +1144,12 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
 
         {/* ── Preview Column ─────────────────── */}
         <div
-          className="sticky top-12.25 h-[calc(100vh-49px)] overflow-y-auto bg-zinc-950 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-[3px] [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-track]:bg-transparent hover:[&::-webkit-scrollbar-thumb]:bg-zinc-700"
+          className="relative bg-zinc-950 lg:sticky lg:top-12.25 lg:h-[calc(100vh-49px)] lg:overflow-y-auto [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-[3px] [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-track]:bg-transparent hover:[&::-webkit-scrollbar-thumb]:bg-zinc-700"
         >
-          <div className="p-5">
+          <div className="p-4 sm:p-5">
             {/* Preview Header */}
             <div
-              className="mb-4 flex items-center justify-between"
+              className="mb-4 flex flex-wrap items-center justify-between gap-2"
             >
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 shrink-0 rounded-full bg-green-500 animate-pulse" />

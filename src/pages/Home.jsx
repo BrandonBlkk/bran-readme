@@ -18,15 +18,15 @@ const Home = () => {
   const sponsorUrl = 'https://github.com/sponsors/BrandonBlkk'
 
   return (
-    <div className="flex h-screen overflow-hidden bg-zinc-950 font-sans text-zinc-50 antialiased selection:bg-blue-500 selection:text-white">
+    <div className="flex min-h-screen overflow-y-auto bg-zinc-950 font-sans text-zinc-50 antialiased selection:bg-blue-500 selection:text-white lg:h-screen lg:overflow-hidden">
       {/* Slim Sidebar */}
       <Sidebar activePanel={activePanel} onPanelChange={setActivePanel} />
 
       {/* Main Content Area */}
       <div
-        className="ml-12 flex h-screen min-h-0 flex-1 flex-col overflow-hidden"
+        className="ml-0 flex min-h-0 flex-1 flex-col pb-16 lg:ml-12 lg:h-screen lg:pb-0 lg:overflow-hidden"
       >
-        <div className="min-h-0 flex-1 overflow-hidden">
+        <div className="min-h-0 flex-1 overflow-visible lg:overflow-hidden">
           <ReadmeBuilder
             activePanel={activePanel}
             onOpenProjectModal={() => setIsProjectModalOpen(true)}

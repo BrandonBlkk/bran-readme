@@ -41,11 +41,11 @@ const Sidebar = ({ activePanel, onPanelChange }) => {
 
   return (
     <aside
-      className="fixed left-0 top-0 z-40 flex h-screen w-12 flex-col items-center gap-1 border-r border-zinc-800/50 bg-zinc-900/75 pt-4 backdrop-blur-2xl"
+      className="fixed bottom-0 left-0 right-0 z-40 flex h-14 w-full items-center justify-around gap-2 border-t border-zinc-800/60 bg-zinc-900/90 px-2 backdrop-blur-2xl lg:top-0 lg:bottom-auto lg:left-0 lg:right-auto lg:h-screen lg:w-12 lg:flex-col lg:items-center lg:justify-start lg:gap-1 lg:border-t-0 lg:border-r lg:border-zinc-800/50 lg:bg-zinc-900/75 lg:px-0 lg:pt-4"
     >
       {/* Logo mark */}
       <div
-        className="mb-4 flex h-8 w-8 items-center justify-center rounded-lg cursor-pointer"
+        className="mb-4 hidden h-8 w-8 items-center justify-center rounded-lg cursor-pointer lg:flex"
       >
         <img
           src="/logo.svg"
@@ -64,7 +64,7 @@ const Sidebar = ({ activePanel, onPanelChange }) => {
             onClick={() => handlePanelChange(item.action)}
             title={item.label}
             aria-label={item.label}
-            className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-150 ${
+            className={`relative flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-150 cursor-pointer lg:h-9 lg:w-9 ${
               isActive 
                 ? 'bg-blue-500/10 text-blue-500' 
                 : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300'
@@ -72,7 +72,7 @@ const Sidebar = ({ activePanel, onPanelChange }) => {
           >
             {isActive && (
               <span
-                className="absolute -left-1.5 h-4 w-0.75 rounded-r-sm bg-blue-500"
+                className="absolute -left-1.5 hidden h-4 w-0.75 rounded-r-sm bg-blue-500 lg:block"
               />
             )}
             <Icon size={18} />
