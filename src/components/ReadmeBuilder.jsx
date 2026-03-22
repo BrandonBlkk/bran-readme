@@ -979,9 +979,13 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
   const addSection = useSectionStore((s) => s.addSection)
   const removeSection = useSectionStore((s) => s.removeSection)
   const moveSection = useSectionStore((s) => s.moveSection)
+  const setSections = useSectionStore((s) => s.setSections)
   const resetToDefaults = useSectionStore((s) => s.resetToDefaults)
 
   const markdown = useMemo(() => generateMarkdown(sections), [sections])
+  const [isRawMode, setIsRawMode] = useState(false)
+  const [rawMarkdown, setRawMarkdown] = useState('')
+  const [isRawDirty, setIsRawDirty] = useState(false)
   const [activeId, setActiveId] = useState(null)
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const sensors = useSensors(
@@ -1003,6 +1007,189 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
     }
   }, [activeId])
 
+  useEffect(() => {
+    if (!isRawDirty) {
+      setRawMarkdown(markdown)
+    }
+  }, [markdown, isRawDirty])
+
+  const parseRawToSections = (raw) => {
+    const existingByType = new Map()
+    sections.forEach((section) => {
+      if (!existingByType.has(section.type)) {
+        existingByType.set(section.type, section)
+      }
+    })
+
+    const baseContent = (type) => {
+      const base = existingByType.get(type)?.content ?? TEMPLATE_CONTENT[type] ?? {}
+      return clone(base)
+    }
+
+    const splitParagraphs = (text) =>
+      text
+        .split(/\n\s*\n/)
+        .map((part) => part.trim())
+        .filter(Boolean)
+
+    const blocks = []
+    let current = null
+    const preamble = []
+
+    const pushCurrent = () => {
+      if (current) {
+        blocks.push(current)
+        current = null
+      }
+    }
+
+    const lines = String(raw ?? '').replace(/\r\n/g, '\n').split('\n')
+    lines.forEach((line) => {
+      const match = line.match(/^(#{1,2})\s+(.*)$/)
+      if (match) {
+        pushCurrent()
+        current = { level: match[1].length, title: match[2].trim(), lines: [] }
+        return
+      }
+      if (current) {
+        current.lines.push(line)
+      } else {
+        preamble.push(line)
+      }
+    })
+    pushCurrent()
+
+    const sectionsOut = []
+
+    const addSection = (type, content) => {
+      sectionsOut.push({ id: createId(), type, content })
+    }
+
+    const addAboutSection = (heading, text) => {
+      const base = baseContent('about')
+      addSection('about', {
+        ...base,
+        heading: heading || base.heading || 'About',
+        text: text ?? '',
+      })
+    }
+
+    const preambleText = preamble.join('\n').trim()
+    if (preambleText) {
+      addAboutSection('About', preambleText)
+    }
+
+    blocks.forEach((block) => {
+      const title = block.title.trim()
+      const titleLower = title.toLowerCase()
+      const content = block.lines.join('\n').trim()
+
+      if (block.level === 1) {
+        const paragraphs = splitParagraphs(content)
+        const tagline = paragraphs[0] ? paragraphs[0].replace(/\n+/g, ' ').trim() : ''
+        const metaText = paragraphs.slice(1).join(' | ')
+        let location = ''
+        let website = ''
+        if (metaText) {
+          metaText.split('|').map((part) => part.trim()).forEach((part) => {
+            const locationMatch = part.match(/^Location:\s*(.+)$/i)
+            if (locationMatch) location = locationMatch[1].trim()
+            const websiteMatch = part.match(/\[Website\]\(([^)]+)\)/i)
+            if (websiteMatch) website = websiteMatch[1].trim()
+          })
+        }
+        addSection('header', {
+          name: title,
+          tagline,
+          location,
+          website,
+        })
+        return
+      }
+
+      if (block.level === 2) {
+        if (titleLower === 'stats' || titleLower === 'github stats') {
+          const base = baseContent('stats')
+          const next = { ...base }
+          const imageMatch = content.match(/!\[[^\]]*\]\(([^)]+)\)/)
+          if (imageMatch) {
+            try {
+              const url = new URL(imageMatch[1])
+              const params = url.searchParams
+              if (params.has('username')) next.username = params.get('username') ?? ''
+              if (params.has('theme')) next.theme = params.get('theme') ?? ''
+              if (params.has('show_icons')) next.showIcons = params.get('show_icons') === 'true'
+              if (params.has('hide_border')) next.hideBorder = params.get('hide_border') === 'true'
+              if (params.has('include_all_commits'))
+                next.includeAllCommits = params.get('include_all_commits') === 'true'
+              if (params.has('count_private'))
+                next.countPrivate = params.get('count_private') === 'true'
+              if (params.has('rank_icon')) next.rankIcon = params.get('rank_icon') ?? ''
+
+              const applyColor = (field, key) => {
+                if (!params.has(key)) return
+                const value = params.get(key) ?? ''
+                const clean = value.replace('#', '').trim()
+                if (clean) next[field] = `#${clean}`
+              }
+              applyColor('bgColor', 'bg_color')
+              applyColor('titleColor', 'title_color')
+              applyColor('textColor', 'text_color')
+              applyColor('iconColor', 'icon_color')
+
+              const applyNumber = (field, key) => {
+                if (!params.has(key)) return
+                const value = Number(params.get(key))
+                if (!Number.isNaN(value)) next[field] = value
+              }
+              applyNumber('borderRadius', 'border_radius')
+              applyNumber('cardWidth', 'card_width')
+              applyNumber('lineHeight', 'line_height')
+            } catch {
+              // Keep base stats if URL parsing fails.
+            }
+          }
+          addSection('stats', next)
+          return
+        }
+
+        if (titleLower === 'tech stack' || titleLower === 'skills' || titleLower === 'skills icons') {
+          const base = baseContent('skills')
+          const slugMatches = []
+          const regex = /cdn\.simpleicons\.org\/([a-z0-9-]+)/gi
+          let match = regex.exec(content)
+          while (match) {
+            slugMatches.push(match[1])
+            match = regex.exec(content)
+          }
+          const unique = Array.from(new Set(slugMatches))
+          addSection('skills', { ...base, items: unique })
+          return
+        }
+
+        if (titleLower === 'socials' || titleLower === 'social links') {
+          const base = baseContent('socials')
+          const links = []
+          const regex = /-\s*\[([^\]]+)\]\(([^)]+)\)/g
+          let match = regex.exec(content)
+          while (match) {
+            links.push({ label: match[1].trim(), url: match[2].trim() })
+            match = regex.exec(content)
+          }
+          addSection('socials', { ...base, links })
+          return
+        }
+
+        addAboutSection(title || 'About', content)
+        return
+      }
+
+      addAboutSection(title || 'About', content)
+    })
+
+    return sectionsOut
+  }
+
   const handleDragStart = (e) => setActiveId(e.active.id)
   const handleDragEnd = (e) => {
     if (e.over && e.active.id !== e.over.id) moveSection(e.active.id, e.over.id)
@@ -1010,13 +1197,21 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
   }
   const handleDragCancel = () => setActiveId(null)
 
+  const handleRawChange = (event) => {
+    const next = event.target.value
+    setRawMarkdown(next)
+    setIsRawDirty(next !== markdown)
+    setSections(parseRawToSections(next))
+  }
+
   const handleCopyMarkdown = async () => {
     if (!navigator.clipboard?.writeText) {
       toast.error('Clipboard not available.')
       return
     }
     try {
-      await navigator.clipboard.writeText(markdown)
+      const output = isRawDirty ? rawMarkdown : markdown
+      await navigator.clipboard.writeText(output)
       toast.success('Markdown copied to clipboard!')
     } catch {
       toast.error('Copy failed. Try again.')
@@ -1025,6 +1220,9 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
 
   const handleResetDefaults = () => {
     resetToDefaults()
+    setIsRawDirty(false)
+    setRawMarkdown('')
+    setIsRawMode(false)
     toast.success('Defaults template restored.')
   }
 
@@ -1158,29 +1356,68 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
           className={`relative bg-zinc-950 ${isEditorOpen ? 'hidden' : 'block'} lg:block lg:sticky lg:top-12.25 lg:h-[calc(100vh-49px)] lg:overflow-y-auto [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-[3px] [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-track]:bg-transparent hover:[&::-webkit-scrollbar-thumb]:bg-zinc-700`}
         >
           <div className="p-4 sm:p-5">
-            {/* Preview Header */}
-            <div
-              className="mb-4 flex flex-wrap items-center justify-between gap-2"
-            >
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 shrink-0 rounded-full bg-green-500 animate-pulse" />
-                <span className={labelClass}>Preview</span>
-                <span className="text-[11px] text-zinc-600">· Live</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsEditorOpen(true)}
-                  className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 transition-all duration-150 hover:border-zinc-700 hover:text-zinc-300 cursor-pointer select-none lg:hidden"
-                >
-                  Edit Template
-                </button>
-                <GithubModeToggle />
-              </div>
+          {/* Preview Header */}
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            
+            {/* Left Side: Status Indicator */}
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 shrink-0 rounded-full bg-green-500 animate-pulse" />
+              <span className={labelClass}>Preview</span>
+              <span className="text-[11px] text-zinc-600">· Live</span>
             </div>
 
-            {/* Preview Pane */}
-            <Preview markdown={markdown} previewTheme={previewTheme} />
+            {/* Right Side: Action Controls */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Mode Switcher */}
+              <div className="flex items-center gap-1 rounded-full border border-zinc-800 bg-zinc-950 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setIsRawMode(false)}
+                  className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all sm:text-[11px] select-none ${
+                    !isRawMode ? 'bg-zinc-800 text-zinc-50' : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  Preview
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsRawMode(true)}
+                  className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all sm:text-[11px] select-none ${
+                    isRawMode ? 'bg-zinc-800 text-zinc-50' : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  Raw
+                </button>
+              </div>
+
+              {/* Mobile Edit Button - Uses Icon on small screens, Text on slightly larger */}
+              <button
+                type="button"
+                onClick={() => setIsEditorOpen(true)}
+                className="flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500 transition-all hover:border-zinc-700 hover:text-zinc-300 lg:hidden"
+              >
+                <Sparkles size={14} className="text-blue-500" />
+                <span className="hidden xs:inline">Edit Template</span>
+              </button>
+
+              <GithubModeToggle />
+            </div>
+          </div>
+
+          {/* Preview Pane */}
+          {isRawMode ? (
+              <textarea
+                value={rawMarkdown}
+                onChange={handleRawChange}
+                spellCheck={false}
+                className={`${inputClass} h-[60vh] lg:h-screen resize-y font-mono text-[12px] sm:text-[13px]`}
+              />
+            ) : (
+              <Preview
+                markdown={isRawDirty ? rawMarkdown : markdown}
+                previewTheme={previewTheme}
+              />
+            )}
           </div>
         </div>
       </div>
