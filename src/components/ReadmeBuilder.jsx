@@ -19,7 +19,7 @@ import { CSS } from '@dnd-kit/utilities'
 import ReactMarkdown from 'react-markdown'
 import rehypeRaw from 'rehype-raw'
 import remarkGfm from 'remark-gfm'
-import { toast, Toaster } from 'sonner'
+import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
 import Navbar from './Navbar'
 import {
@@ -1421,14 +1421,6 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
           </div>
         </div>
       </div>
-
-      <Toaster
-        theme="dark"
-        position="bottom-right"
-        toastOptions={{
-          className: '!rounded-lg !border !border-zinc-800 !bg-zinc-900 !text-[13px] !text-zinc-50 !font-sans select-none',
-        }}
-      />
     </div>
   )
 }

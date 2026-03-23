@@ -1,10 +1,10 @@
-import { Copy, RotateCcw } from 'lucide-react'
+import { Copy } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import profileImage from '../assets/images/Profile.png'
+import ResetButton from './ResetButton'
 
 const Navbar = ({ onReset, onCopy, onOpenProjectModal }) => {
   const [isBeta, setIsBeta] = useState(true);
-  const [isRotating, setIsRotating] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
   const [isVisible, setIsVisible] = useState(true)
   const [navHeight, setNavHeight] = useState(0);
@@ -83,12 +83,6 @@ const Navbar = ({ onReset, onCopy, onOpenProjectModal }) => {
     return () => document.removeEventListener('scroll', handleScroll, true)
   }, [isVisible])
 
-  const handleResetClick = () => {
-    setIsRotating(true);
-    onReset();
-    setTimeout(() => setIsRotating(false), 500);
-  };
-
   const handleCopyClick = () => {
     setIsCopying(true);
     onCopy();
@@ -99,10 +93,6 @@ const Navbar = ({ onReset, onCopy, onOpenProjectModal }) => {
     <>
       <header
         ref={navRef}
-        /* - Fixed only on mobile (below lg)
-           - Relative/Sticky on desktop (lg and up)
-           - We force translate-y-0 and opacity-100 on desktop so the hide logic doesn't hide the desktop nav
-        */
         className={`z-30 flex flex-wrap items-center justify-between gap-x-3 gap-y-3 border-b border-zinc-800 bg-zinc-900/75 px-4 py-3 backdrop-blur-lg transition-all duration-300 ease-in-out lg:flex-nowrap lg:gap-4 lg:px-6 
           fixed inset-x-0 top-0 lg:sticky lg:translate-y-0 lg:opacity-100 lg:pointer-events-auto ${
           isVisible
@@ -142,17 +132,11 @@ const Navbar = ({ onReset, onCopy, onOpenProjectModal }) => {
         </button>
 
         <div className="flex w-full items-center gap-2 select-none order-last lg:order-0 lg:w-auto lg:flex-nowrap lg:justify-end">
-          <button
-            type="button"
-            onClick={handleResetClick}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-2 text-xs font-medium text-zinc-400 transition-all duration-150 hover:border-zinc-700 hover:text-zinc-50 cursor-pointer lg:flex-none lg:px-3 lg:py-1.5"
-          >
-            <RotateCcw 
-              size={13} 
-              className={`${isRotating ? '-rotate-360 transition-all duration-300 ease-in-out' : ''}`} 
-            />
-            Reset
-          </button>
+          <ResetButton
+            label="Reset"
+            onClick={onReset}
+            className="flex-1 lg:flex-none lg:px-3 lg:py-1.5"
+          />
 
           <button
             type="button"

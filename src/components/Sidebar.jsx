@@ -24,10 +24,11 @@ const Sidebar = ({ activePanel, onPanelChange }) => {
   }, [location.pathname, onPanelChange])
 
   const handlePanelChange = (action) => {
-    if (action === 'about') {
+    if (action === 'about' || action === 'settings') {
       onPanelChange(action)
-      if (location.pathname !== '/about') {
-        navigate('/about')
+      const target = action === 'settings' ? '/settings' : '/about'
+      if (location.pathname !== target) {
+        navigate(target)
       }
     } else {
       if (location.pathname !== '/') {
@@ -58,6 +59,7 @@ const Sidebar = ({ activePanel, onPanelChange }) => {
         const Icon = item.icon
         const isActive = activePanel === item.action
           || (item.action === 'about' && location.pathname === '/about')
+          || (item.action === 'settings' && location.pathname === '/settings')
         return (
           <button
             key={item.id}
