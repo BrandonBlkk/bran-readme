@@ -24,9 +24,14 @@ const Sidebar = ({ activePanel, onPanelChange }) => {
   }, [location.pathname, onPanelChange])
 
   const handlePanelChange = (action) => {
-    if (action === 'about' || action === 'settings') {
+    if (action === 'about' || action === 'settings' || action === 'templates') {
       onPanelChange(action)
-      const target = action === 'settings' ? '/settings' : '/about'
+      const target =
+        action === 'settings'
+          ? '/settings'
+          : action === 'templates'
+            ? '/templates'
+            : '/about'
       if (location.pathname !== target) {
         navigate(target)
       }
@@ -60,6 +65,7 @@ const Sidebar = ({ activePanel, onPanelChange }) => {
         const isActive = activePanel === item.action
           || (item.action === 'about' && location.pathname === '/about')
           || (item.action === 'settings' && location.pathname === '/settings')
+          || (item.action === 'templates' && location.pathname === '/templates')
         return (
           <button
             key={item.id}
