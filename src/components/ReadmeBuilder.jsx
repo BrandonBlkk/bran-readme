@@ -541,7 +541,6 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
   const handleResetDefaults = () => {
     resetToDefaults()
     setIsRawDirty(false)
-    setRawMarkdown('')
     setIsRawMode(false)
     toast.success('Defaults template restored.')
   }
