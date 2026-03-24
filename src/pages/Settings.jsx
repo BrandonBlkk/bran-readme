@@ -12,6 +12,8 @@ import {
   Sun,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import Footer from '../components/Footer'
+import Toggle from '../components/Toggle'
 
 const labelClass = 'text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500'
 const inputClass =
@@ -41,30 +43,6 @@ const defaultExport = {
   includeBadges: true,
   includeFooter: false,
 }
-
-const ToggleRow = ({ title, description, checked, onChange }) => (
-  <button
-    type="button"
-    onClick={() => onChange(!checked)}
-    className="flex w-full items-start justify-between gap-4 rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-left transition-all duration-150 hover:border-zinc-700 cursor-pointer"
-  >
-    <div>
-      <p className="text-sm font-semibold text-zinc-50">{title}</p>
-      <p className="mt-1 text-xs leading-relaxed text-zinc-500">{description}</p>
-    </div>
-    <span
-      className={`relative mt-1 inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 ${
-        checked ? 'bg-blue-500' : 'bg-zinc-800'
-      }`}
-    >
-      <span
-        className={`h-4 w-4 rounded-full bg-white transition-transform duration-200 ${
-          checked ? 'translate-x-4.5' : 'translate-x-0.5'
-        }`}
-      />
-    </span>
-  </button>
-)
 
 const Settings = () => {
   const currentYear = 2026
@@ -188,7 +166,7 @@ const Settings = () => {
                 Editor Preferences
               </h2>
               <div className="grid grid-cols-1 gap-2">
-                <ToggleRow
+                <Toggle
                   title="Auto-save changes"
                   description="Keep templates saved locally every few seconds."
                   checked={preferences.autosave}
@@ -255,13 +233,13 @@ const Settings = () => {
                 </div>
               </div>
               <div className="mt-3 grid grid-cols-1 gap-2">
-                <ToggleRow
+                <Toggle
                   title="Include badge row"
                   description="Prepends commonly used badges to the header."
                   checked={exportDefaults.includeBadges}
                   onChange={(value) => updateExport('includeBadges', value)}
                 />
-                <ToggleRow
+                <Toggle
                   title="Add footer signature"
                   description="Adds a small footer signature to each export."
                   checked={exportDefaults.includeFooter}
@@ -276,19 +254,19 @@ const Settings = () => {
                 Data & Privacy
               </h2>
               <div className="grid grid-cols-1 gap-2">
-                <ToggleRow
+                <Toggle
                   title="Store templates locally"
                   description="Saves README layouts in your browser for instant reloads."
                   checked={preferences.localOnly}
                   onChange={(value) => setPreferences((prev) => ({ ...prev, localOnly: value }))}
                 />
-                <ToggleRow
+                <Toggle
                   title="Cloud sync"
                   description="Back up templates to the cloud so they follow you everywhere."
                   checked={preferences.cloudSync}
                   onChange={(value) => setPreferences((prev) => ({ ...prev, cloudSync: value }))}
                 />
-                <ToggleRow
+                <Toggle
                   title="Email product updates"
                   description="Receive release notes and new template drops."
                   checked={preferences.emailUpdates}
@@ -337,11 +315,7 @@ const Settings = () => {
               </div>
             </section>
 
-            <footer className="py-6 text-center">
-              <p className="text-[9px] uppercase tracking-widest text-zinc-600 sm:text-[10px] mb-12 lg:mb-0">
-                © {currentYear} BranReadme - settings overview
-              </p>
-            </footer>
+            <Footer label="settings overview" />  
           </div>
         </div>
       </div>
