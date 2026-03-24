@@ -22,6 +22,7 @@ import remarkGfm from 'remark-gfm'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
 import Navbar from './Navbar'
+import Toggle from './Toggle'
 import {
   ChevronDown,
   GripVertical,
@@ -292,27 +293,6 @@ const Field = ({ label, hint, children }) => (
       </span>
     )}
   </label>
-)
-
-const Toggle = ({ label, checked, onChange }) => (
-  <button
-    type="button"
-    onClick={() => onChange(!checked)}
-    className="flex w-full items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-[13px] text-zinc-50 transition-colors duration-150"
-  >
-    <span>{label}</span>
-    <span
-      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 ${
-        checked ? 'bg-blue-500' : 'bg-zinc-800'
-      }`}
-    >
-      <span
-        className={`h-4 w-4 rounded-full bg-white transition-transform duration-200 ${
-          checked ? 'translate-x-4.5' : 'translate-x-0.5'
-        }`}
-      />
-    </span>
-  </button>
 )
 
 const RangeField = ({ label, min, max, step = 1, value, onChange }) => (
