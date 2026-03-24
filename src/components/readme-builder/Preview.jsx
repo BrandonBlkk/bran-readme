@@ -39,7 +39,11 @@ const Preview = ({ markdown, previewTheme }) => {
         const src = child.props?.src
         return (
           typeof src === 'string'
-          && (src.includes('cdn.simpleicons.org') || src.includes('github-readme-stats.vercel.app'))
+          && (
+            src.includes('cdn.simpleicons.org')
+            || src.includes('skillicons.dev')
+            || src.includes('github-readme-stats.vercel.app')
+          )
         )
       })
       return (
@@ -72,11 +76,12 @@ const Preview = ({ markdown, previewTheme }) => {
       <blockquote className={`my-0 border-l-4 px-4 ${theme.blockquote}`} {...props} />
     ),
     img: ({ src = '', alt = '', ...props }) => {
-      const isTechIcon = typeof src === 'string' && src.includes('cdn.simpleicons.org')
+      const isTechIcon = typeof src === 'string'
+        && (src.includes('cdn.simpleicons.org') || src.includes('skillicons.dev'))
       const isGitStats = typeof src === 'string' && src.includes('github-readme-stats.vercel.app')
       const selectNone = (isTechIcon || isGitStats) ? 'select-none' : ''
       const className = isTechIcon
-        ? 'inline-block align-middle mr-2.5 mb-2 h-auto w-[clamp(24px,5vw,40px)] max-w-none'
+        ? 'inline-block align-middle h-auto w-[clamp(24px,5vw,40px)] max-w-none'
         : 'max-w-full h-auto'
       return <img src={src} alt={alt} className={`${className} ${selectNone}`} {...props} />
     },

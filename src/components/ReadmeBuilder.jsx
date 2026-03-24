@@ -62,7 +62,7 @@ const TEMPLATE_CONTENT = {
   },
   skills: {
     items: ['react', 'typescript', 'tailwindcss', 'vite', 'nodedotjs'],
-    iconSize: 26,
+    iconSize: 40,
   },
   socials: {
     links: [
@@ -162,6 +162,30 @@ const TECH_ICON_MAP = TECH_OPTIONS.reduce((acc, icon) => {
   return acc
 }, {})
 
+const SKILLICONS_OVERRIDES = {
+  javascript: 'js',
+  typescript: 'ts',
+  cplusplus: 'cpp',
+  csharp: 'cs',
+  gnubash: 'bash',
+  postgresql: 'postgres',
+  rubyonrails: 'rails',
+  tailwindcss: 'tailwind',
+  nodedotjs: 'nodejs',
+  nextdotjs: 'nextjs',
+  nuxtdotjs: 'nuxtjs',
+  vuedotjs: 'vue',
+  rollupdotjs: 'rollup',
+}
+
+const toSkillIconsSlug = (value) => {
+  const slug = String(value ?? '')
+  if (!slug) return ''
+  if (SKILLICONS_OVERRIDES[slug]) return SKILLICONS_OVERRIDES[slug]
+  if (slug.endsWith('dotjs')) return slug.replace(/dotjs$/, 'js')
+  return slug
+}
+
 const SECTION_LABELS = SECTION_LIBRARY.reduce((acc, item) => {
   acc[item.type] = item.label
   return acc
@@ -226,14 +250,16 @@ const skillsBlock = (c) => {
     .map((slug) => TECH_ICON_MAP[slug] ?? { title: slug, slug })
     .filter(Boolean)
   if (!items.length) return '## Tech Stack\n\nAdd your tech stack icons.'
+  const iconSize = Number(c.iconSize ?? 40) || 40
   const icons = items
     .map((icon) => {
-      const src = icon.slug
-        ? `https://cdn.simpleicons.org/${icon.slug}`
+      const slug = toSkillIconsSlug(icon.slug)
+      const src = slug
+        ? `https://skillicons.dev/icons?i=${slug}&theme=dark`
         : FALLBACK_ICON
-      return `<img src="${src}" alt="${icon.title}" />`
+      return `<img src="${src}" alt="${icon.title}" width="${iconSize}" height="${iconSize}" />`
     })
-    .join(' ')
+    .join('&nbsp;&nbsp;')
   return `## Tech Stack\n\n${icons}`
 }
 
