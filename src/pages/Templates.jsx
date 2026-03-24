@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react'
 import Sidebar from '../components/Sidebar'
 import { LayoutGrid, Sparkles, Share2, Plus, Heart } from 'lucide-react'
 import TemplateMockup from '../components/TemplateMockup'
+import Footer from '../components/Footer'
 
 const TEMPLATE_LIBRARY = [
   {
@@ -136,9 +137,7 @@ const Templates = () => {
               </div>
             </section>
 
-            <footer className="py-6 text-center mb-12 lg:mb-0">
-              <p className="text-[10px] uppercase tracking-widest text-zinc-600">© {currentYear} BranReadme — README Templates Gallery</p>
-            </footer>
+            <Footer label="README Templates Gallery" />  
           </div>
         </div>
       </div>

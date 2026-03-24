@@ -12,6 +12,7 @@ import {
   Sun,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import Footer from '../components/Footer'
 
 const labelClass = 'text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500'
 const inputClass =
@@ -337,11 +338,7 @@ const Settings = () => {
               </div>
             </section>
 
-            <footer className="py-6 text-center">
-              <p className="text-[9px] uppercase tracking-widest text-zinc-600 sm:text-[10px] mb-12 lg:mb-0">
-                © {currentYear} BranReadme - settings overview
-              </p>
-            </footer>
+            <Footer label="settings overview" />  
           </div>
         </div>
       </div>
