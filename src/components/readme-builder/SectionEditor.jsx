@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import Toggle from '../Toggle'
 import { Field, RangeField, ColorField, inputClass, labelClass } from './FormFields'
 
@@ -251,60 +251,238 @@ const SkillsEditor = ({ section, updateSection, techOptions, fallbackIcon }) => 
   )
 }
 
-const SocialsEditor = ({ section, updateSection }) => {
+const SocialsEditor = ({ section, updateSection, socialOptions, fallbackIcon }) => {
   const c = section.content ?? {}
-  const links = c.links ?? []
+  const links = Array.isArray(c.links) ? c.links : []
+  const [query, setQuery] = useState('')
+  const [activeCategory, setActiveCategory] = useState('All')
+  const [page, setPage] = useState(1)
 
-  const updateLink = (index, field, value) => {
-    const next = links.map((link, idx) => (idx === index ? { ...link, [field]: value } : link))
-    updateSection(section.id, { links: next })
+  const normalizeKey = (value) =>
+    String(value ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
+
+  const socialIndex = useMemo(() => {
+    const map = {}
+    socialOptions.forEach((icon) => {
+      map[icon.slug] = icon
+      map[icon.title.toLowerCase()] = icon
+      map[icon.slug.toLowerCase()] = icon
+      map[normalizeKey(icon.title)] = icon
+      map[normalizeKey(icon.slug)] = icon
+    })
+    return map
+  }, [socialOptions])
+
+  const toSocialSlug = (value) => {
+    const raw = String(value ?? '').trim()
+    if (!raw) return ''
+    const direct = socialIndex[raw] || socialIndex[raw.toLowerCase()]
+    if (direct?.slug) return direct.slug
+    const normalized = normalizeKey(raw)
+    return socialIndex[normalized]?.slug ?? ''
   }
-  const removeLink = (index) => {
-    updateSection(section.id, { links: links.filter((_, idx) => idx !== index) })
+
+  const normalizedLinks = useMemo(
+    () =>
+      links.map((link) => {
+        const slug = link.slug || toSocialSlug(link.label)
+        if (!slug) return link
+        const title = socialIndex[slug]?.title ?? link.label
+        return { ...link, slug, label: title || link.label }
+      }),
+    [links, socialIndex],
+  )
+
+  const selected = new Set(
+    normalizedLinks.map((link) => link.slug).filter(Boolean),
+  )
+
+  const updateLinks = (next) => updateSection(section.id, { links: next })
+
+  const addSocial = (icon) => {
+    if (selected.has(icon.slug)) return
+    updateLinks([
+      ...normalizedLinks,
+      { label: icon.title, slug: icon.slug, url: '' },
+    ])
   }
-  const addLink = () => {
-    updateSection(section.id, { links: [...links, { label: '', url: '' }] })
+
+  const removeSocial = (slug) => {
+    updateLinks(
+      normalizedLinks.filter((link) => (link.slug || toSocialSlug(link.label)) !== slug),
+    )
   }
+
+  const toggleSocial = (icon) => {
+    if (selected.has(icon.slug)) removeSocial(icon.slug)
+    else addSocial(icon)
+  }
+
+  const updateLink = (slug, field, value) => {
+    const next = normalizedLinks.map((link) => {
+      const linkSlug = link.slug || toSocialSlug(link.label)
+      if (linkSlug !== slug) return link
+      return { ...link, slug: linkSlug, [field]: value }
+    })
+    updateLinks(next)
+  }
+
+  const categories = useMemo(() => {
+    const set = new Set(
+      socialOptions.map((icon) => icon.category).filter(Boolean),
+    )
+    return ['All', ...Array.from(set).sort()]
+  }, [socialOptions])
+
+  const filteredOptions = useMemo(() => {
+    const term = query.trim().toLowerCase()
+    return socialOptions.filter((icon) => {
+      const matchesQuery = term
+        ? `${icon.title} ${icon.slug} ${icon.category}`.toLowerCase().includes(term)
+        : true
+      const matchesCategory = activeCategory === 'All' || icon.category === activeCategory
+      return matchesQuery && matchesCategory
+    })
+  }, [query, activeCategory, socialOptions])
+
+  const PAGE_SIZE = 24
+  const totalPages = Math.max(1, Math.ceil(filteredOptions.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const startIndex = (currentPage - 1) * PAGE_SIZE
+  const visibleOptions = filteredOptions.slice(startIndex, startIndex + PAGE_SIZE)
 
   return (
-    <div className="grid gap-2.5">
-      {links.map((link, index) => (
-        <div
-          key={`${link.label}-${index}`}
-          className="grid gap-2 rounded-lg border border-zinc-800 bg-zinc-950 p-3"
-        >
-          <div className="flex items-center justify-between">
-            <span className={labelClass}>Link {index + 1}</span>
+    <div className="grid gap-4">
+      <Field label="Search Socials">
+        <input
+          className={inputClass}
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value)
+            setPage(1)
+          }}
+          placeholder="Search by name or slug"
+        />
+      </Field>
+      <div className="flex flex-wrap gap-1.5">
+        {categories.map((category) => {
+          const isActive = activeCategory === category
+          return (
             <button
+              key={category}
               type="button"
-              onClick={() => removeLink(index)}
-              className="flex h-6 w-6 items-center justify-center rounded-md border border-zinc-800 text-zinc-500 transition-all duration-150 hover:border-red-500 hover:text-red-500 cursor-pointer"
+              onClick={() => {
+                setActiveCategory(category)
+                setPage(1)
+              }}
+              className={`cursor-pointer rounded-full border px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-all duration-150 select-none ${
+                isActive
+                  ? 'border-blue-500 bg-blue-500/15 text-zinc-50'
+                  : 'border-zinc-800 bg-zinc-950 text-zinc-400'
+              }`}
             >
-              <Trash2 size={12} />
+              {category}
             </button>
-          </div>
-          <input
-            className={inputClass}
-            value={link.label ?? ''}
-            onChange={(e) => updateLink(index, 'label', e.target.value)}
-            placeholder="Label"
-          />
-          <input
-            className={inputClass}
-            value={link.url ?? ''}
-            onChange={(e) => updateLink(index, 'url', e.target.value)}
-            placeholder="https://example.com"
-          />
+          )
+        })}
+      </div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {visibleOptions.map((icon) => {
+          const isActive = selected.has(icon.slug)
+          return (
+            <button
+              key={icon.slug}
+              type="button"
+              onClick={() => toggleSocial(icon)}
+              className={`flex cursor-pointer flex-col gap-1.5 rounded-lg border p-2.5 text-center text-[11px] transition-all duration-150 select-none ${
+                isActive
+                  ? 'border-blue-500 bg-blue-500/15 text-zinc-50'
+                  : 'border-zinc-800 bg-zinc-950 text-zinc-400'
+              }`}
+              title={`${icon.title} · ${icon.category}`}
+            >
+              <img
+                src={`https://cdn.simpleicons.org/${icon.slug}`}
+                alt={icon.title}
+                className="h-6.5 w-6.5 self-center"
+                loading="lazy"
+                onError={(e) => {
+                  e.currentTarget.src = fallbackIcon
+                }}
+              />
+              <span>{icon.title}</span>
+            </button>
+          )
+        })}
+      </div>
+      <div className="flex items-center justify-between">
+        <p className="text-[11px] text-zinc-600">
+          Showing {visibleOptions.length} of {filteredOptions.length}
+        </p>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+            disabled={currentPage <= 1}
+            className="rounded-full border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-[11px] text-zinc-400 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer select-none"
+          >
+            Prev
+          </button>
+          <span className="text-[11px] text-zinc-600">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+            disabled={currentPage >= totalPages}
+            className="rounded-full border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-[11px] text-zinc-400 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer select-none"
+          >
+            Next
+          </button>
         </div>
-      ))}
-      <button
-        type="button"
-        onClick={addLink}
-        className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-zinc-800 p-2 text-xs font-semibold text-zinc-500 transition-all duration-150 hover:border-zinc-700 hover:text-zinc-400 cursor-pointer select-none"
-      >
-        <Plus size={14} />
-        Add Link
-      </button>
+      </div>
+      <div className="grid gap-2.5">
+        {normalizedLinks.map((link, index) => {
+          const slug = link.slug || toSocialSlug(link.label)
+          if (!slug) return null
+          const icon = socialIndex[slug]
+          const title = link.label || icon?.title || `Link ${index + 1}`
+          return (
+            <div
+              key={`${slug}-${index}`}
+              className="grid gap-2 rounded-lg border border-zinc-800 bg-zinc-950 p-3"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <img
+                    src={`https://cdn.simpleicons.org/${slug}`}
+                    alt={title}
+                    className="h-5 w-5"
+                    loading="lazy"
+                    onError={(e) => {
+                      e.currentTarget.src = fallbackIcon
+                    }}
+                  />
+                  <span className={labelClass}>{title}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeSocial(slug)}
+                  className="flex h-6 w-6 items-center justify-center rounded-md border border-zinc-800 text-zinc-500 transition-all duration-150 hover:border-red-500 hover:text-red-500 cursor-pointer"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
+              <input
+                className={inputClass}
+                value={link.url ?? ''}
+                onChange={(e) => updateLink(slug, 'url', e.target.value)}
+                placeholder="https://example.com"
+              />
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -349,13 +527,13 @@ const TextEditor = ({ section, updateSection }) => {
   )
 }
 
-const SectionEditor = ({ section, updateSection, buildStatsUrl, techOptions, fallbackIcon }) => {
+const SectionEditor = ({ section, updateSection, buildStatsUrl, techOptions, socialOptions, fallbackIcon }) => {
   switch (section.type) {
     case 'header': return <HeaderEditor section={section} updateSection={updateSection} />
     case 'about': return <AboutEditor section={section} updateSection={updateSection} />
     case 'stats': return <StatsEditor section={section} updateSection={updateSection} buildStatsUrl={buildStatsUrl} />
     case 'skills': return <SkillsEditor section={section} updateSection={updateSection} techOptions={techOptions} fallbackIcon={fallbackIcon} />
-    case 'socials': return <SocialsEditor section={section} updateSection={updateSection} />
+    case 'socials': return <SocialsEditor section={section} updateSection={updateSection} socialOptions={socialOptions} fallbackIcon={fallbackIcon} />
     case 'text': return <TextEditor section={section} updateSection={updateSection} />
     default: return null
   }

@@ -15,6 +15,7 @@ import { AnimatePresence } from 'framer-motion'
 import Navbar from './Navbar'
 import { Plus, Trash2, Sparkles } from 'lucide-react'
 import { techData } from '../utils/tech-data'
+import { socialData } from '../utils/social-data'
 import { labelClass, inputClass } from './readme-builder/FormFields'
 import SectionEditor from './readme-builder/SectionEditor'
 import Preview from './readme-builder/Preview'
@@ -69,10 +70,10 @@ const TEMPLATE_CONTENT = {
   },
   socials: {
     links: [
-      { label: 'GitHub', url: 'https://github.com/username' },
-      { label: 'LinkedIn', url: 'https://linkedin.com/in/username' },
-      { label: 'X (Twitter)', url: 'https://x.com/username' },
-      { label: 'Website', url: 'https://username.dev' },
+      { label: 'GitHub', slug: 'github', url: 'https://github.com/username' },
+      { label: 'LinkedIn', slug: 'linkedin', url: 'https://linkedin.com/in/username' },
+      { label: 'YouTube', slug: 'youtube', url: 'https://youtube.com/@username' },
+      { label: 'Discord', slug: 'discord', url: 'https://discord.gg/yourserver' },
     ],
   },
   text: {
@@ -189,6 +190,17 @@ const TECH_ICON_MAP = TECH_OPTIONS.reduce((acc, icon) => {
   return acc
 }, {})
 
+const SOCIAL_OPTIONS = socialData.map((icon) => ({
+  title: icon.name,
+  slug: icon.slug,
+  category: icon.category,
+}))
+
+const SOCIAL_ICON_MAP = SOCIAL_OPTIONS.reduce((acc, icon) => {
+  acc[icon.slug] = icon
+  return acc
+}, {})
+
 const SKILLICONS_OVERRIDES = {
   javascript: 'js',
   typescript: 'ts',
@@ -220,6 +232,26 @@ const toSkillIconsSlug = (value) => {
   if (SKILLICONS_OVERRIDES[slug]) return SKILLICONS_OVERRIDES[slug]
   if (slug.endsWith('dotjs')) return slug.replace(/dotjs$/, 'js')
   return slug
+}
+
+const normalizeKey = (value) =>
+  String(value ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
+
+const SOCIAL_SLUG_MAP = SOCIAL_OPTIONS.reduce((acc, icon) => {
+  acc[icon.slug.toLowerCase()] = icon.slug
+  acc[normalizeKey(icon.slug)] = icon.slug
+  acc[icon.title.toLowerCase()] = icon.slug
+  acc[normalizeKey(icon.title)] = icon.slug
+  return acc
+}, {})
+
+const toSocialSlug = (value) => {
+  const raw = String(value ?? '').trim()
+  if (!raw) return ''
+  const key = raw.toLowerCase()
+  if (SOCIAL_SLUG_MAP[key]) return SOCIAL_SLUG_MAP[key]
+  const normalized = normalizeKey(raw)
+  return SOCIAL_SLUG_MAP[normalized] ?? ''
 }
 
 const SECTION_LABELS = SECTION_LIBRARY.reduce((acc, item) => {
@@ -301,9 +333,30 @@ const skillsBlock = (c) => {
 }
 
 const socialsBlock = (c) => {
-  const links = (c.links ?? []).filter((l) => l.label && l.url)
+  const links = (c.links ?? [])
+    .map((link) => ({
+      ...link,
+      slug: link.slug || toSocialSlug(link.label),
+    }))
+    .filter((l) => l.label && l.url)
   if (!links.length) return 'Add your social links.'
-  return `${links.map((l) => `- [${l.label}](${l.url})`).join('\n')}`
+  const iconLinks = links.filter((l) => l.slug)
+  const textLinks = links.filter((l) => !l.slug)
+  const iconSize = 28
+  const icons = iconLinks
+    .map((link) => {
+      const slug = link.slug || toSocialSlug(link.label)
+      const src = slug ? `https://cdn.simpleicons.org/${slug}` : FALLBACK_ICON
+      const label = link.label || (SOCIAL_ICON_MAP[slug]?.title ?? slug)
+      return `<a href="${link.url}"><img src="${src}" alt="${label}" width="${iconSize}" height="${iconSize}" /></a>`
+    })
+    .join('&nbsp;&nbsp;')
+  const list = textLinks.length
+    ? textLinks.map((l) => `- [${l.label}](${l.url})`).join('\n')
+    : ''
+  if (icons && list) return `${icons}\n\n${list}`
+  if (icons) return icons
+  return list
 }
 
 const aboutBlock = (c) => {
@@ -597,11 +650,22 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
           addTextTitle(title)
           const base = baseContent('socials')
           const links = []
-          const regex = /-\s*\[([^\]]+)\]\(([^)]+)\)/g
-          let match = regex.exec(content)
+          const iconRegex = /<a[^>]*href="([^"]+)"[^>]*>[\s\S]*?cdn\.simpleicons\.org\/([a-z0-9-]+)[^"]*"[^>]*>[\s\S]*?<\/a>/gi
+          let match = iconRegex.exec(content)
           while (match) {
-            links.push({ label: match[1].trim(), url: match[2].trim() })
-            match = regex.exec(content)
+            const url = match[1].trim()
+            const slug = match[2].trim()
+            const label = SOCIAL_ICON_MAP[slug]?.title ?? slug
+            links.push({ label, slug, url })
+            match = iconRegex.exec(content)
+          }
+          if (!links.length) {
+            const regex = /-\s*\[([^\]]+)\]\(([^)]+)\)/g
+            let listMatch = regex.exec(content)
+            while (listMatch) {
+              links.push({ label: listMatch[1].trim(), url: listMatch[2].trim() })
+              listMatch = regex.exec(content)
+            }
           }
           addSection('socials', { ...base, links })
           return
@@ -773,6 +837,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
                               section={section}
                               updateSection={updateSection}
                               techOptions={TECH_OPTIONS}
+                              socialOptions={SOCIAL_OPTIONS}
                               fallbackIcon={FALLBACK_ICON}
                               buildStatsUrl={buildStatsUrl}
                             />
