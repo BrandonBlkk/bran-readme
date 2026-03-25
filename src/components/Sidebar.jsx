@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { LayoutGrid, Settings, Download, Plus, Info } from 'lucide-react'
 
 const sidebarItems = [
@@ -50,7 +50,8 @@ const Sidebar = ({ activePanel, onPanelChange }) => {
       className="fixed bottom-0 left-0 right-0 z-40 flex h-14 w-full items-center justify-around gap-2 border-t border-zinc-800/60 bg-zinc-900/90 px-2 backdrop-blur-2xl lg:top-0 lg:bottom-auto lg:left-0 lg:right-auto lg:h-screen lg:w-12 lg:flex-col lg:items-center lg:justify-start lg:gap-1 lg:border-t-0 lg:border-r lg:border-zinc-800/50 lg:bg-zinc-900/75 lg:px-0 lg:pt-4"
     >
       {/* Logo mark */}
-      <div
+      <Link
+        to="/landing"
         className="mb-4 hidden h-8 w-8 items-center justify-center rounded-lg cursor-pointer lg:flex"
       >
         <img
@@ -58,7 +59,7 @@ const Sidebar = ({ activePanel, onPanelChange }) => {
           alt="Profile"
           className="h-5 w-5 rounded-full select-none"
         />
-      </div>
+      </Link>
 
       {sidebarItems.map((item) => {
         const Icon = item.icon

@@ -2,6 +2,7 @@ import { Copy } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import profileImage from '../assets/images/Profile.png'
 import ResetButton from './ResetButton'
+import { Link } from 'react-router-dom'
 
 const Navbar = ({ onReset, onCopy, onOpenProjectModal }) => {
   const [isBeta, setIsBeta] = useState(true);
@@ -101,9 +102,9 @@ const Navbar = ({ onReset, onCopy, onOpenProjectModal }) => {
         }`}
       >
         <div className="flex items-center gap-3">
-          <h1 className="text-sm font-semibold tracking-[-0.01em] text-zinc-50">
+          <Link to="/landing" className="text-sm font-semibold tracking-[-0.01em] text-zinc-50">
             BranReadme
-          </h1>
+          </Link>
           { isBeta ?
             <span className="rounded-full border border-rose-800 bg-zinc-900 px-2 py-0.5 text-[11px] font-medium text-rose-400 select-none">
               Beta
