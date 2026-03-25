@@ -43,6 +43,22 @@ const HeaderEditor = ({ section, updateSection }) => {
   )
 }
 
+const AboutEditor = ({ section, updateSection }) => {
+  const c = section.content ?? {}
+  return (
+    <div className="grid gap-3">
+      <Field label="Body">
+        <textarea
+          className={`${inputClass} min-h-25 resize-y`}
+          value={c.text ?? ''}
+          onChange={(e) => updateSection(section.id, { text: e.target.value })}
+          placeholder="Tell the world what you are building."
+        />
+      </Field>
+    </div>
+  )
+}
+
 const StatsEditor = ({ section, updateSection, buildStatsUrl }) => {
   const c = section.content ?? {}
   const statsUrl = buildStatsUrl(c)
@@ -293,26 +309,42 @@ const SocialsEditor = ({ section, updateSection }) => {
   )
 }
 
-const AboutEditor = ({ section, updateSection }) => {
+const TextEditor = ({ section, updateSection }) => {
   const c = section.content ?? {}
   return (
     <div className="grid gap-3">
-      <Field label="Heading">
-        <input
-          className={inputClass}
-          value={c.heading ?? ''}
-          onChange={(e) => updateSection(section.id, { heading: e.target.value })}
-          placeholder="About"
-        />
-      </Field>
-      <Field label="Body">
+      <Field label="Text">
         <textarea
           className={`${inputClass} min-h-25 resize-y`}
           value={c.text ?? ''}
           onChange={(e) => updateSection(section.id, { text: e.target.value })}
-          placeholder="Tell the world what you are building."
+          placeholder="Drop in a short callout or statement."
         />
       </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Text Size">
+          <select
+            className={inputClass}
+            value={c.size ?? 'p'}
+            onChange={(e) => updateSection(section.id, { size: e.target.value })}
+          >
+            {['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].map((size) => (
+              <option key={size} value={size}>{size.toUpperCase()}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Alignment">
+          <select
+            className={inputClass}
+            value={c.align ?? 'left'}
+            onChange={(e) => updateSection(section.id, { align: e.target.value })}
+          >
+            {['left', 'center', 'right'].map((align) => (
+              <option key={align} value={align}>{align}</option>
+            ))}
+          </select>
+        </Field>
+      </div>
     </div>
   )
 }
@@ -320,10 +352,11 @@ const AboutEditor = ({ section, updateSection }) => {
 const SectionEditor = ({ section, updateSection, buildStatsUrl, techOptions, fallbackIcon }) => {
   switch (section.type) {
     case 'header': return <HeaderEditor section={section} updateSection={updateSection} />
+    case 'about': return <AboutEditor section={section} updateSection={updateSection} />
     case 'stats': return <StatsEditor section={section} updateSection={updateSection} buildStatsUrl={buildStatsUrl} />
     case 'skills': return <SkillsEditor section={section} updateSection={updateSection} techOptions={techOptions} fallbackIcon={fallbackIcon} />
     case 'socials': return <SocialsEditor section={section} updateSection={updateSection} />
-    case 'about': return <AboutEditor section={section} updateSection={updateSection} />
+    case 'text': return <TextEditor section={section} updateSection={updateSection} />
     default: return null
   }
 }
