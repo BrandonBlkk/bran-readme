@@ -4,10 +4,12 @@ import About from './pages/About'
 import Settings from './pages/Settings'
 import Templates from './pages/Templates'
 import NotFound from './pages/NotFound'
+import LandingPage from './pages/LandingPage'
 
 const App = () => {
   return (
     <Routes>
+      <Route path="/landing" element={<LandingPage />} />
       <Route path="/" element={<Home />} />
       <Route path="/about" element={<About />} />
       <Route path="/settings" element={<Settings />} />

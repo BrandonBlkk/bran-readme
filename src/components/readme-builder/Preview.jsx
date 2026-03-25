@@ -16,20 +16,37 @@ const Preview = ({ markdown, previewTheme }) => {
   }
 
   const components = {
-    h1: (props) => (
-      <h1
-        className={`mb-4 border-b pb-[0.3em] text-[26px] font-semibold sm:text-[28px] md:text-[32px] ${isDark ? 'border-[#30363d]' : 'border-[#d0d7de]'}`}
-        {...props}
-      />
-    ),
-    h2: (props) => (
-      <h2
-        className={`mb-4 mt-6 border-b pb-[0.3em] text-[20px] font-semibold sm:text-[22px] md:text-[24px] ${isDark ? 'border-[#30363d]' : 'border-[#d0d7de]'}`}
-        {...props}
-      />
-    ),
+    h1: (props) => {
+      const showDivider = props['data-divider'] !== 'false'
+      const dividerClass = showDivider ? `border-b pb-[0.3em] ${isDark ? 'border-[#30363d]' : 'border-[#d0d7de]'}` : ''
+      return (
+        <h1
+          className={`mb-4 text-[26px] font-semibold sm:text-[28px] md:text-[32px] ${dividerClass}`}
+          {...props}
+        />
+      )
+    },
+    h2: (props) => {
+      const showDivider = props['data-divider'] !== 'false'
+      const dividerClass = showDivider ? `border-b pb-[0.3em] ${isDark ? 'border-[#30363d]' : 'border-[#d0d7de]'}` : ''
+      return (
+        <h2
+          className={`mb-4 mt-6 text-[20px] font-semibold sm:text-[22px] md:text-[24px] ${dividerClass}`}
+          {...props}
+        />
+      )
+    },
     h3: (props) => (
       <h3 className="mb-4 mt-6 text-[18px] font-semibold sm:text-[19px] md:text-[20px]" {...props} />
+    ),
+    h4: (props) => (
+      <h4 className="mb-3 mt-5 text-[16px] font-semibold sm:text-[17px] md:text-[18px]" {...props} />
+    ),
+    h5: (props) => (
+      <h5 className="mb-3 mt-5 text-[15px] font-semibold sm:text-[16px]" {...props} />
+    ),
+    h6: (props) => (
+      <h6 className="mb-3 mt-5 text-[14px] font-semibold uppercase tracking-[0.04em]" {...props} />
     ),
     p: (props) => {
       const children = React.Children.toArray(props.children)

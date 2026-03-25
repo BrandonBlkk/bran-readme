@@ -15,6 +15,7 @@ import { AnimatePresence } from 'framer-motion'
 import Navbar from './Navbar'
 import { Plus, Trash2, Sparkles } from 'lucide-react'
 import { techData } from '../utils/tech-data'
+import { socialData } from '../utils/social-data'
 import { labelClass, inputClass } from './readme-builder/FormFields'
 import SectionEditor from './readme-builder/SectionEditor'
 import Preview from './readme-builder/Preview'
@@ -44,6 +45,9 @@ const TEMPLATE_CONTENT = {
     location: 'San Francisco, CA',
     website: 'https://janedeveloper.dev',
   },
+  about: {
+    text: 'I build clean, fast developer tooling with a focus on UX and performance.',
+  },
   stats: {
     username: 'octocat',
     theme: 'transparent',
@@ -66,24 +70,27 @@ const TEMPLATE_CONTENT = {
   },
   socials: {
     links: [
-      { label: 'GitHub', url: 'https://github.com/username' },
-      { label: 'LinkedIn', url: 'https://linkedin.com/in/username' },
-      { label: 'X (Twitter)', url: 'https://x.com/username' },
-      { label: 'Website', url: 'https://username.dev' },
+      { label: 'GitHub', slug: 'github', url: 'https://github.com/username' },
+      { label: 'LinkedIn', slug: 'linkedin', url: 'https://linkedin.com/in/username' },
+      { label: 'YouTube', slug: 'youtube', url: 'https://youtube.com/@username' },
+      { label: 'Discord', slug: 'discord', url: 'https://discord.gg/yourserver' },
     ],
   },
-  about: {
-    heading: 'About',
-    text: 'I build clean, fast developer tooling with a focus on UX and performance.',
+  text: {
+    text: "Hi, I'm Brandon 👋",
+    size: 'h2',
+    align: 'center',
+    divider: true,
   },
 }
 
 const SECTION_LIBRARY = [
   { type: 'header', label: 'Header', description: 'Name, tagline, and key links.' },
+  { type: 'about', label: 'About', description: 'Short bio or mission statement.' },
   { type: 'stats', label: 'GitHub Stats', description: 'Live stats card with theming controls.' },
   { type: 'skills', label: 'Skills Icons', description: 'Simple Icons tech stack strip.' },
   { type: 'socials', label: 'Social Links', description: 'Primary links and profiles.' },
-  { type: 'about', label: 'Text / About', description: 'Short bio or mission statement.' },
+  { type: 'text', label: 'Text Block', description: 'Custom text with size and alignment.' },
 ]
 
 const createSection = (type) => ({
@@ -92,12 +99,27 @@ const createSection = (type) => ({
   content: clone(TEMPLATE_CONTENT[type] ?? {}),
 })
 
+const createTextTitleSection = (title) => ({
+  id: createId(),
+  type: 'text',
+  content: {
+    text: title,
+    size: 'h2',
+    align: 'left',
+    divider: true,
+  },
+})
+
 const getDefaultSections = () => [
   createSection('header'),
-  createSection('stats'),
-  createSection('skills'),
-  createSection('socials'),
+  createTextTitleSection('About'),
   createSection('about'),
+  createTextTitleSection('Stats'),
+  createSection('stats'),
+  createTextTitleSection('Tech Stack'),
+  createSection('skills'),
+  createTextTitleSection('Socials'),
+  createSection('socials'),
 ]
 
 const moveItem = (list, fromIndex, toIndex) => {
@@ -116,7 +138,13 @@ const useSectionStore = create(
       setPreviewTheme: (theme) => set({ previewTheme: theme }),
       addSection: (type) =>
         set((state) => ({
-          sections: [...state.sections, createSection(type)],
+          sections: [
+            ...state.sections,
+            ...(SECTION_TITLE_MAP[type]
+              ? [createTextTitleSection(SECTION_TITLE_MAP[type])]
+              : []),
+            createSection(type),
+          ],
         })),
       removeSection: (id) =>
         set((state) => ({
@@ -162,6 +190,17 @@ const TECH_ICON_MAP = TECH_OPTIONS.reduce((acc, icon) => {
   return acc
 }, {})
 
+const SOCIAL_OPTIONS = socialData.map((icon) => ({
+  title: icon.name,
+  slug: icon.slug,
+  category: icon.category,
+}))
+
+const SOCIAL_ICON_MAP = SOCIAL_OPTIONS.reduce((acc, icon) => {
+  acc[icon.slug] = icon
+  return acc
+}, {})
+
 const SKILLICONS_OVERRIDES = {
   javascript: 'js',
   typescript: 'ts',
@@ -178,12 +217,41 @@ const SKILLICONS_OVERRIDES = {
   rollupdotjs: 'rollup',
 }
 
+const TEXT_TAGS = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']
+const TEXT_ALIGNMENTS = ['left', 'center', 'right']
+const SECTION_TITLE_MAP = {
+  stats: 'Stats',
+  skills: 'Tech Stack',
+  socials: 'Socials',
+  about: 'About',
+}
+
 const toSkillIconsSlug = (value) => {
   const slug = String(value ?? '')
   if (!slug) return ''
   if (SKILLICONS_OVERRIDES[slug]) return SKILLICONS_OVERRIDES[slug]
   if (slug.endsWith('dotjs')) return slug.replace(/dotjs$/, 'js')
   return slug
+}
+
+const normalizeKey = (value) =>
+  String(value ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
+
+const SOCIAL_SLUG_MAP = SOCIAL_OPTIONS.reduce((acc, icon) => {
+  acc[icon.slug.toLowerCase()] = icon.slug
+  acc[normalizeKey(icon.slug)] = icon.slug
+  acc[icon.title.toLowerCase()] = icon.slug
+  acc[normalizeKey(icon.title)] = icon.slug
+  return acc
+}, {})
+
+const toSocialSlug = (value) => {
+  const raw = String(value ?? '').trim()
+  if (!raw) return ''
+  const key = raw.toLowerCase()
+  if (SOCIAL_SLUG_MAP[key]) return SOCIAL_SLUG_MAP[key]
+  const normalized = normalizeKey(raw)
+  return SOCIAL_SLUG_MAP[normalized] ?? ''
 }
 
 const SECTION_LABELS = SECTION_LIBRARY.reduce((acc, item) => {
@@ -204,6 +272,7 @@ const SECTION_PILL_VARIANTS = {
   skills: 'text-[#fbbf24] border-[rgba(251,191,36,0.3)] bg-[rgba(251,191,36,0.08)]',
   socials: 'text-[#60a5fa] border-[rgba(96,165,250,0.3)] bg-[rgba(96,165,250,0.08)]',
   about: 'text-[#f472b6] border-[rgba(244,114,182,0.3)] bg-[rgba(244,114,182,0.08)]',
+  text: 'text-[#38bdf8] border-[rgba(56,189,248,0.3)] bg-[rgba(56,189,248,0.08)]',
 }
 const getSectionPillClass = (type) =>
   `${SECTION_PILL_BASE} ${SECTION_PILL_VARIANTS[type] ?? 'text-zinc-500 border-zinc-800 bg-zinc-900'}`
@@ -243,13 +312,13 @@ const headerBlock = (c) => {
   return lines.join('\n\n')
 }
 
-const statsBlock = (c) => `## Stats\n\n![GitHub Stats](${buildStatsUrl(c)})`
+const statsBlock = (c) => `![GitHub Stats](${buildStatsUrl(c)})`
 
 const skillsBlock = (c) => {
   const items = (c.items ?? [])
     .map((slug) => TECH_ICON_MAP[slug] ?? { title: slug, slug })
     .filter(Boolean)
-  if (!items.length) return '## Tech Stack\n\nAdd your tech stack icons.'
+  if (!items.length) return 'Add your tech stack icons.'
   const iconSize = Number(c.iconSize ?? 40) || 40
   const icons = items
     .map((icon) => {
@@ -260,18 +329,52 @@ const skillsBlock = (c) => {
       return `<img src="${src}" alt="${icon.title}" width="${iconSize}" height="${iconSize}" />`
     })
     .join('&nbsp;&nbsp;')
-  return `## Tech Stack\n\n${icons}`
+  return `${icons}`
 }
 
 const socialsBlock = (c) => {
-  const links = (c.links ?? []).filter((l) => l.label && l.url)
-  if (!links.length) return '## Socials\n\nAdd your social links.'
-  return `## Socials\n\n${links.map((l) => `- [${l.label}](${l.url})`).join('\n')}`
+  const links = (c.links ?? [])
+    .map((link) => ({
+      ...link,
+      slug: link.slug || toSocialSlug(link.label),
+    }))
+    .filter((l) => l.label && l.url)
+  if (!links.length) return 'Add your social links.'
+  const iconLinks = links.filter((l) => l.slug)
+  const textLinks = links.filter((l) => !l.slug)
+  const iconSize = 28
+  const icons = iconLinks
+    .map((link) => {
+      const slug = link.slug || toSocialSlug(link.label)
+      const src = slug ? `https://cdn.simpleicons.org/${slug}` : FALLBACK_ICON
+      const label = link.label || (SOCIAL_ICON_MAP[slug]?.title ?? slug)
+      return `<a href="${link.url}"><img src="${src}" alt="${label}" width="${iconSize}" height="${iconSize}" /></a>`
+    })
+    .join('&nbsp;&nbsp;')
+  const list = textLinks.length
+    ? textLinks.map((l) => `- [${l.label}](${l.url})`).join('\n')
+    : ''
+  if (icons && list) return `${icons}\n\n${list}`
+  if (icons) return icons
+  return list
 }
 
 const aboutBlock = (c) => {
   if (!c.text) return ''
-  return `## ${c.heading || 'About'}\n\n${c.text}`
+  return `${c.text}`
+}
+
+const textBlock = (c) => {
+  const raw = String(c.text ?? '').trim()
+  if (!raw) return ''
+  const tagCandidate = String(c.size ?? 'p').toLowerCase()
+  const tag = TEXT_TAGS.includes(tagCandidate) ? tagCandidate : 'p'
+  const alignCandidate = String(c.align ?? 'left').toLowerCase()
+  const align = TEXT_ALIGNMENTS.includes(alignCandidate) ? alignCandidate : 'left'
+  const alignAttr = align !== 'left' ? ` align="${align}"` : ''
+  const dividerAttr = ` data-divider="${c.divider !== false}"`
+  const text = raw.replace(/\r?\n/g, '<br />')
+  return `<${tag}${alignAttr}${dividerAttr}>${text}</${tag}>`
 }
 
 const generateMarkdown = (sections) =>
@@ -284,6 +387,7 @@ const generateMarkdown = (sections) =>
         case 'skills': return skillsBlock(c)
         case 'socials': return socialsBlock(c)
         case 'about': return aboutBlock(c)
+        case 'text': return textBlock(c)
         default: return ''
       }
     })
@@ -352,15 +456,30 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
         .map((part) => part.trim())
         .filter(Boolean)
 
+    const parseTextTag = (line) => {
+      const match = line.match(/^<(p|h[1-6])\s*([^>]*)>([\s\S]*)<\/\1>\s*$/i)
+      if (!match) return null
+      const tag = match[1].toLowerCase()
+      const attrs = match[2] ?? ''
+      const alignMatch = attrs.match(/align="(left|center|right)"/i)
+      const dividerMatch = attrs.match(/data-divider="(true|false)"/i)
+      const align = (alignMatch?.[1] ?? 'left').toLowerCase()
+      const divider = dividerMatch ? dividerMatch[1].toLowerCase() !== 'false' : true
+      const text = match[3]
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/&nbsp;/gi, ' ')
+        .trim()
+      return { tag, align, text, divider }
+    }
+
     const blocks = []
-    let current = null
-    const preamble = []
+    let current = { type: 'free', lines: [] }
 
     const pushCurrent = () => {
-      if (current) {
+      if (current && current.lines.length) {
         blocks.push(current)
-        current = null
       }
+      current = null
     }
 
     const lines = String(raw ?? '').replace(/\r\n/g, '\n').split('\n')
@@ -368,13 +487,26 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
       const match = line.match(/^(#{1,2})\s+(.*)$/)
       if (match) {
         pushCurrent()
-        current = { level: match[1].length, title: match[2].trim(), lines: [] }
+        current = {
+          type: 'heading',
+          level: match[1].length,
+          title: match[2].trim(),
+          lines: [],
+        }
         return
+      }
+      const textMatch = parseTextTag(line)
+      if (textMatch) {
+        pushCurrent()
+        blocks.push({ type: 'text', ...textMatch })
+        current = { type: 'free', lines: [] }
+        return
+      }
+      if (!current) {
+        current = { type: 'free', lines: [] }
       }
       if (current) {
         current.lines.push(line)
-      } else {
-        preamble.push(line)
       }
     })
     pushCurrent()
@@ -385,21 +517,46 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
       sectionsOut.push({ id: createId(), type, content })
     }
 
+    const addTextTitle = (title) => {
+      const base = baseContent('text')
+      addSection('text', {
+        ...base,
+        text: title,
+        size: 'h2',
+        align: 'left',
+        divider: true,
+      })
+    }
+
     const addAboutSection = (heading, text) => {
       const base = baseContent('about')
+      const title = heading || 'About'
+      if (title) addTextTitle(title)
       addSection('about', {
         ...base,
-        heading: heading || base.heading || 'About',
         text: text ?? '',
       })
     }
 
-    const preambleText = preamble.join('\n').trim()
-    if (preambleText) {
-      addAboutSection('About', preambleText)
-    }
-
     blocks.forEach((block) => {
+      if (block.type === 'text') {
+        const base = baseContent('text')
+        addSection('text', {
+          ...base,
+          text: block.text,
+          size: block.tag,
+          align: block.align,
+          divider: block.divider,
+        })
+        return
+      }
+
+      if (block.type === 'free') {
+        const content = block.lines.join('\n').trim()
+        if (content) addAboutSection('About', content)
+        return
+      }
+
       const title = block.title.trim()
       const titleLower = title.toLowerCase()
       const content = block.lines.join('\n').trim()
@@ -429,6 +586,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
 
       if (block.level === 2) {
         if (titleLower === 'stats' || titleLower === 'github stats') {
+          addTextTitle(title)
           const base = baseContent('stats')
           const next = { ...base }
           const imageMatch = content.match(/!\[[^\]]*\]\(([^)]+)\)/)
@@ -474,6 +632,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
         }
 
         if (titleLower === 'tech stack' || titleLower === 'skills' || titleLower === 'skills icons') {
+          addTextTitle(title)
           const base = baseContent('skills')
           const slugMatches = []
           const regex = /cdn\.simpleicons\.org\/([a-z0-9-]+)/gi
@@ -488,13 +647,25 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
         }
 
         if (titleLower === 'socials' || titleLower === 'social links') {
+          addTextTitle(title)
           const base = baseContent('socials')
           const links = []
-          const regex = /-\s*\[([^\]]+)\]\(([^)]+)\)/g
-          let match = regex.exec(content)
+          const iconRegex = /<a[^>]*href="([^"]+)"[^>]*>[\s\S]*?cdn\.simpleicons\.org\/([a-z0-9-]+)[^"]*"[^>]*>[\s\S]*?<\/a>/gi
+          let match = iconRegex.exec(content)
           while (match) {
-            links.push({ label: match[1].trim(), url: match[2].trim() })
-            match = regex.exec(content)
+            const url = match[1].trim()
+            const slug = match[2].trim()
+            const label = SOCIAL_ICON_MAP[slug]?.title ?? slug
+            links.push({ label, slug, url })
+            match = iconRegex.exec(content)
+          }
+          if (!links.length) {
+            const regex = /-\s*\[([^\]]+)\]\(([^)]+)\)/g
+            let listMatch = regex.exec(content)
+            while (listMatch) {
+              links.push({ label: listMatch[1].trim(), url: listMatch[2].trim() })
+              listMatch = regex.exec(content)
+            }
           }
           addSection('socials', { ...base, links })
           return
@@ -666,6 +837,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
                               section={section}
                               updateSection={updateSection}
                               techOptions={TECH_OPTIONS}
+                              socialOptions={SOCIAL_OPTIONS}
                               fallbackIcon={FALLBACK_ICON}
                               buildStatsUrl={buildStatsUrl}
                             />
