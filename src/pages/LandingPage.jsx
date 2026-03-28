@@ -170,7 +170,7 @@ const LandingPage = () => {
                         <div className="mt-3 h-px bg-[#262626]" />
                         <div className="mt-3 rounded-xl border border-[#1f1f1f] bg-[#101010] p-4 select-none">
                             <img
-                                src="https://github-readme-stats.vercel.app/api?username=BrandonBlkk&show_icons=true&hide_border=true&theme=transparent&count_private=true"
+                                src="https://github-readme-stats-delta-eight-12.vercel.app/api?username=BrandonBlkk&show_icons=true&hide_border=true&theme=transparent&count_private=true&title_color=58a6ff&text_color=c9d1d9&icon_color=58a6ff&rank_color=58a6ff&text_bold=true"
                                 alt="GitHub stats"
                                 className="w-full max-w-sm"
                             />

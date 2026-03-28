@@ -24,8 +24,7 @@ import DragPreview from './readme-builder/DragPreview'
 import EmptyState from './readme-builder/EmptyState'
 import GithubModeToggle from './readme-builder/GithubModeToggle'
 
-const FALLBACK_ICON =
-  'data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"%23999\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"4\"/><path d=\"M8 12h8\"/></svg>'
+const FALLBACK_ICON = 'https://cdn.simpleicons.org/simpleicons/999';
 
 /* ── Helpers ───────────────────────────────────────── */
 const createId = () => {
@@ -70,9 +69,8 @@ const TEMPLATE_CONTENT = {
   },
   socials: {
     links: [
-      { label: 'GitHub', slug: 'github', url: 'https://github.com/username' },
       { label: 'LinkedIn', slug: 'linkedin', url: 'https://linkedin.com/in/username' },
-      { label: 'YouTube', slug: 'youtube', url: 'https://youtube.com/@username' },
+      { label: 'Instagram', slug: 'instagram', url: 'https://youtube.com/@username' },
       { label: 'Discord', slug: 'discord', url: 'https://discord.gg/yourserver' },
     ],
   },
@@ -281,7 +279,7 @@ const sanitizeHex = (value) => String(value ?? '').replace('#', '').trim()
 
 /* ── Markdown Generators ───────────────────────────── */
 const buildStatsUrl = (content) => {
-  const url = new URL('https://github-readme-stats.vercel.app/api')
+  const url = new URL('https://github-readme-stats-delta-eight-12.vercel.app/api')
   if (content.username) url.searchParams.set('username', content.username)
   if (content.theme) url.searchParams.set('theme', content.theme)
   if (content.showIcons) url.searchParams.set('show_icons', 'true')
@@ -346,7 +344,7 @@ const socialsBlock = (c) => {
   const icons = iconLinks
     .map((link) => {
       const slug = link.slug || toSocialSlug(link.label)
-      const src = slug ? `https://cdn.simpleicons.org/${slug}` : FALLBACK_ICON
+      const src = slug ? `https://skillicons.dev/icons?i=${slug}` : FALLBACK_ICON
       const label = link.label || (SOCIAL_ICON_MAP[slug]?.title ?? slug)
       return `<a href="${link.url}"><img src="${src}" alt="${label}" width="${iconSize}" height="${iconSize}" /></a>`
     })
@@ -650,7 +648,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
           addTextTitle(title)
           const base = baseContent('socials')
           const links = []
-          const iconRegex = /<a[^>]*href="([^"]+)"[^>]*>[\s\S]*?cdn\.simpleicons\.org\/([a-z0-9-]+)[^"]*"[^>]*>[\s\S]*?<\/a>/gi
+          const iconRegex = /<a[^>]*href="([^"]+)"[^>]*>[\s\S]*?(?:cdn\.simpleicons\.org\/|skillicons\.dev\/icons\?i=)([a-z0-9-]+)[^"]*"[^>]*>[\s\S]*?<\/a>/gi
           let match = iconRegex.exec(content)
           while (match) {
             const url = match[1].trim()
