@@ -121,7 +121,6 @@ const StatsEditor = ({ section, updateSection, buildStatsUrl }) => {
 
 const SkillsEditor = ({ section, updateSection, techOptions, fallbackIcon }) => {
   const c = section.content ?? {}
-  const selected = new Set(c.items ?? [])
   const [query, setQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState('All')
   const [page, setPage] = useState(1)
@@ -149,6 +148,18 @@ const SkillsEditor = ({ section, updateSection, techOptions, fallbackIcon }) => 
     if (slug.endsWith('dotjs')) return slug.replace(/dotjs$/, 'js')
     return slug
   }
+
+  const optionSlugBySkillSlug = {}
+  techOptions.forEach((icon) => {
+    optionSlugBySkillSlug[icon.slug] = icon.slug
+    optionSlugBySkillSlug[toSkillIconsSlug(icon.slug)] = icon.slug
+  })
+  const selected = new Set(
+    (c.items ?? []).map((slug) => {
+      const raw = String(slug ?? '')
+      return optionSlugBySkillSlug[raw] || optionSlugBySkillSlug[toSkillIconsSlug(raw)] || raw
+    }),
+  )
 
   const brokenSet = useMemo(() => new Set(brokenIcons), [brokenIcons])
 
@@ -321,10 +332,13 @@ const SocialsEditor = ({ section, updateSection, socialOptions, fallbackIcon }) 
     return socialIndex[normalized]?.slug ?? ''
   }
 
+  const getLinkSlug = (link) =>
+    toSocialSlug(link?.slug) || toSocialSlug(link?.label)
+
   const normalizedLinks = useMemo(
     () =>
       links.map((link) => {
-        const slug = link.slug || toSocialSlug(link.label)
+        const slug = toSocialSlug(link.slug) || toSocialSlug(link.label)
         if (!slug) return link
         const title = socialIndex[slug]?.title ?? link.label
         return { ...link, slug, label: title || link.label }
@@ -365,7 +379,7 @@ const addSocial = (icon) => {
 
   const removeSocial = (slug) => {
     updateLinks(
-      normalizedLinks.filter((link) => (link.slug || toSocialSlug(link.label)) !== slug),
+      normalizedLinks.filter((link) => getLinkSlug(link) !== slug),
     )
   }
 
@@ -376,7 +390,7 @@ const addSocial = (icon) => {
 
   const updateLink = (slug, field, value) => {
     const next = normalizedLinks.map((link) => {
-      const linkSlug = link.slug || toSocialSlug(link.label)
+      const linkSlug = getLinkSlug(link)
       if (linkSlug !== slug) return link
       return { ...link, slug: linkSlug, [field]: value }
     })
@@ -499,7 +513,7 @@ const addSocial = (icon) => {
       </div>
       <div className="grid gap-2.5">
         {normalizedLinks.map((link, index) => {
-          const slug = link.slug || toSocialSlug(link.label)
+          const slug = getLinkSlug(link)
           if (!slug) return null
           const icon = socialIndex[slug]
           const title = link.label || icon?.title || `Link ${index + 1}`
