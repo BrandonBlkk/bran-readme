@@ -50,6 +50,9 @@ const TEMPLATE_CONTENT = {
   stats: {
     username: 'octocat',
     theme: 'transparent',
+    showMainStats: true,
+    showLanguageStats: true,
+    showTrophyStats: true,
     showIcons: true,
     hideBorder: true,
     includeAllCommits: false,
@@ -299,6 +302,36 @@ const buildStatsUrl = (content) => {
   return url.toString()
 }
 
+const buildLanguageStatsUrl = (content) => {
+  const url = new URL('https://github-readme-stats-delta-eight-12.vercel.app/api/top-langs')
+  if (content.username) url.searchParams.set('username', content.username)
+  if (content.theme) url.searchParams.set('theme', content.theme)
+  if (content.hideBorder) url.searchParams.set('hide_border', 'true')
+  if (content.bgColor) url.searchParams.set('bg_color', sanitizeHex(content.bgColor))
+  if (content.titleColor) url.searchParams.set('title_color', sanitizeHex(content.titleColor))
+  if (content.textColor) url.searchParams.set('text_color', sanitizeHex(content.textColor))
+  if (content.borderRadius !== undefined)
+    url.searchParams.set('border_radius', String(content.borderRadius))
+  url.searchParams.set('layout', 'compact')
+  return url.toString()
+}
+
+const buildTrophyStatsUrl = (content) => {
+  const url = new URL('https://github-profile-trophy.screw-hand.vercel.app/')
+  if (content.username) url.searchParams.set('username', content.username)
+  const statsTheme = String(content.theme ?? '').toLowerCase()
+  const trophyTheme =
+    statsTheme === 'tokyonight' || statsTheme === 'radical' || statsTheme === 'dracula'
+      ? statsTheme
+      : 'onestar'
+  url.searchParams.set('theme', trophyTheme)
+  if (content.hideBorder) url.searchParams.set('no-frame', 'true')
+  if (content.bgColor || statsTheme === 'transparent') url.searchParams.set('no-bg', 'true')
+  url.searchParams.set('margin-w', '0')
+  url.searchParams.set('margin-h', '8')
+  return url.toString()
+}
+
 const headerBlock = (c) => {
   const lines = []
   if (c.name) lines.push(`# ${c.name}`)
@@ -310,7 +343,36 @@ const headerBlock = (c) => {
   return lines.join('\n\n')
 }
 
-const statsBlock = (c) => `![GitHub Stats](${buildStatsUrl(c)})`
+const statsBlock = (c) => {
+  const mainCard = c.showMainStats !== false
+    ? { alt: 'GitHub Stats', src: buildStatsUrl(c) }
+    : null
+  const languageCard = c.showLanguageStats !== false
+    ? { alt: 'Top Languages', src: buildLanguageStatsUrl(c) }
+    : null
+  const trophyCard = c.showTrophyStats !== false
+    ? { alt: 'GitHub Trophies', src: buildTrophyStatsUrl(c) }
+    : null
+
+  if (!mainCard && !languageCard && !trophyCard) return 'Enable at least one GitHub card.'
+
+  const cardWidth = 390
+  const cardHeight = 195
+  const trophyWidth = 650
+  const renderTopCard = (card) =>
+    `<img src="${card.src}" alt="${card.alt}" width="${cardWidth}" height="${cardHeight}" />`
+  const renderTrophyCard = (card) =>
+    `<img src="${card.src}" alt="${card.alt}" width="${trophyWidth}" />`
+  const topRowCards = [mainCard, languageCard].filter(Boolean)
+  const topRow = topRowCards.length
+    ? `<div align="center">\n${topRowCards.map(renderTopCard).join('\n&nbsp;&nbsp;\n')}\n</div>`
+    : ''
+  const bottomRow = trophyCard
+    ? `<div align="center">\n${renderTrophyCard(trophyCard)}\n</div>`
+    : ''
+
+  return `<div align="center">\n${topRow}${topRow && bottomRow ? '\n<br />\n' : ''}${bottomRow}\n</div>`
+}
 
 const skillsBlock = (c) => {
   const items = (c.items ?? [])
@@ -587,40 +649,82 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
           addTextTitle(title)
           const base = baseContent('stats')
           const next = { ...base }
-          const imageMatch = content.match(/!\[[^\]]*\]\(([^)]+)\)/)
-          if (imageMatch) {
+          const imageUrls = []
+          const markdownImageRegex = /!\[[^\]]*\]\(([^)]+)\)/g
+          let markdownMatch = markdownImageRegex.exec(content)
+          while (markdownMatch) {
+            imageUrls.push(markdownMatch[1].trim())
+            markdownMatch = markdownImageRegex.exec(content)
+          }
+          const htmlImageRegex = /<img[^>]*src="([^"]+)"/gi
+          let htmlMatch = htmlImageRegex.exec(content)
+          while (htmlMatch) {
+            imageUrls.push(htmlMatch[1].trim())
+            htmlMatch = htmlImageRegex.exec(content)
+          }
+
+          const statsUrl = imageUrls.find((urlValue) => {
+            const lower = urlValue.toLowerCase()
+            return (
+              lower.includes('github-readme-stats-delta-eight-12.vercel.app/api')
+              && !lower.includes('/api/top-langs')
+            )
+          })
+          const languageUrl = imageUrls.find((urlValue) =>
+            urlValue.toLowerCase().includes('github-readme-stats-delta-eight-12.vercel.app/api/top-langs'),
+          )
+          const trophyUrl = imageUrls.find((urlValue) => {
+            const lower = urlValue.toLowerCase()
+            return (
+              lower.includes('github-profile-trophy.screw-hand.vercel.app')
+              || lower.includes('github-profile-trophy-alpha-ecru.vercel.app')
+              || lower.includes('github-profile-trophy.vercel.app')
+            )
+          })
+          const referenceUrl = statsUrl || languageUrl || trophyUrl
+          const hasStatsCardUrl = Boolean(statsUrl || languageUrl)
+
+          if (statsUrl || languageUrl || trophyUrl) {
+            next.showMainStats = Boolean(statsUrl)
+            next.showLanguageStats = Boolean(languageUrl)
+            next.showTrophyStats = Boolean(trophyUrl)
+          }
+
+          if (referenceUrl) {
             try {
-              const url = new URL(imageMatch[1])
+              const url = new URL(referenceUrl)
               const params = url.searchParams
               if (params.has('username')) next.username = params.get('username') ?? ''
-              if (params.has('theme')) next.theme = params.get('theme') ?? ''
-              if (params.has('show_icons')) next.showIcons = params.get('show_icons') === 'true'
-              if (params.has('hide_border')) next.hideBorder = params.get('hide_border') === 'true'
-              if (params.has('include_all_commits'))
-                next.includeAllCommits = params.get('include_all_commits') === 'true'
-              if (params.has('count_private'))
-                next.countPrivate = params.get('count_private') === 'true'
-              if (params.has('rank_icon')) next.rankIcon = params.get('rank_icon') ?? ''
+              if (hasStatsCardUrl) {
+                if (params.has('theme')) next.theme = params.get('theme') ?? ''
+                if (params.has('show_icons')) next.showIcons = params.get('show_icons') === 'true'
+                if (params.has('hide_border')) next.hideBorder = params.get('hide_border') === 'true'
+                if (params.has('include_all_commits'))
+                  next.includeAllCommits = params.get('include_all_commits') === 'true'
+                if (params.has('count_private'))
+                  next.countPrivate = params.get('count_private') === 'true'
+                if (params.has('rank_icon')) next.rankIcon = params.get('rank_icon') ?? ''
 
-              const applyColor = (field, key) => {
-                if (!params.has(key)) return
-                const value = params.get(key) ?? ''
-                const clean = value.replace('#', '').trim()
-                if (clean) next[field] = `#${clean}`
-              }
-              applyColor('bgColor', 'bg_color')
-              applyColor('titleColor', 'title_color')
-              applyColor('textColor', 'text_color')
-              applyColor('iconColor', 'icon_color')
+                const applyColor = (field, key) => {
+                  if (!params.has(key)) return
+                  const value = params.get(key) ?? ''
+                  const clean = value.replace('#', '').trim()
+                  if (clean) next[field] = `#${clean}`
+                }
+                applyColor('bgColor', 'bg_color')
+                applyColor('titleColor', 'title_color')
+                applyColor('textColor', 'text_color')
+                applyColor('iconColor', 'icon_color')
 
-              const applyNumber = (field, key) => {
-                if (!params.has(key)) return
-                const value = Number(params.get(key))
-                if (!Number.isNaN(value)) next[field] = value
+                const applyNumber = (field, key) => {
+                  if (!params.has(key)) return
+                  const value = Number(params.get(key))
+                  if (!Number.isNaN(value)) next[field] = value
+                }
+                applyNumber('borderRadius', 'border_radius')
+                applyNumber('cardWidth', 'card_width')
+                applyNumber('lineHeight', 'line_height')
               }
-              applyNumber('borderRadius', 'border_radius')
-              applyNumber('cardWidth', 'card_width')
-              applyNumber('lineHeight', 'line_height')
             } catch {
               // Keep base stats if URL parsing fails.
             }

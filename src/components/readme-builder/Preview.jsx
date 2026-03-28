@@ -60,6 +60,9 @@ const Preview = ({ markdown, previewTheme }) => {
             src.includes('cdn.simpleicons.org')
             || src.includes('skillicons.dev')
             || src.includes('github-readme-stats-delta-eight-12.vercel.app')
+            || src.includes('github-profile-trophy.screw-hand.vercel.app')
+            || src.includes('github-profile-trophy-alpha-ecru.vercel.app')
+            || src.includes('github-profile-trophy.vercel.app')
           )
         )
       })
@@ -95,11 +98,19 @@ const Preview = ({ markdown, previewTheme }) => {
     img: ({ src = '', alt = '', ...props }) => {
       const isTechIcon = typeof src === 'string'
         && (src.includes('cdn.simpleicons.org') || src.includes('skillicons.dev'))
-      const isGitStats = typeof src === 'string' && src.includes('github-readme-stats-delta-eight-12.vercel.app')
+      const isGitStats = typeof src === 'string'
+        && (
+          src.includes('github-readme-stats-delta-eight-12.vercel.app')
+          || src.includes('github-profile-trophy.screw-hand.vercel.app')
+          || src.includes('github-profile-trophy-alpha-ecru.vercel.app')
+          || src.includes('github-profile-trophy.vercel.app')
+        )
       const selectNone = (isTechIcon || isGitStats) ? 'select-none' : ''
       const className = isTechIcon
         ? 'inline-block align-middle h-auto w-[clamp(24px,5vw,40px)] max-w-none'
-        : 'max-w-full h-auto'
+        : isGitStats
+          ? 'inline-block align-middle h-auto max-w-full'
+          : 'max-w-full h-auto'
       return <img src={src} alt={alt} className={`${className} ${selectNone}`} {...props} />
     },
   }
