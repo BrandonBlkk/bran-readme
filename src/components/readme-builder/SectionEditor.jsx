@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import Toggle from '../Toggle'
 import { Field, RangeField, ColorField, inputClass, labelClass } from './FormFields'
 
@@ -120,10 +121,47 @@ const StatsEditor = ({ section, updateSection, buildStatsUrl }) => {
 
 const SkillsEditor = ({ section, updateSection, techOptions, fallbackIcon }) => {
   const c = section.content ?? {}
-  const selected = new Set(c.items ?? [])
   const [query, setQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState('All')
   const [page, setPage] = useState(1)
+  const [brokenIcons, setBrokenIcons] = useState([])
+  const SKILLICONS_OVERRIDES = {
+    javascript: 'js',
+    typescript: 'ts',
+    cplusplus: 'cpp',
+    csharp: 'cs',
+    gnubash: 'bash',
+    postgresql: 'postgres',
+    rubyonrails: 'rails',
+    tailwindcss: 'tailwind',
+    nodedotjs: 'nodejs',
+    nextdotjs: 'nextjs',
+    nuxtdotjs: 'nuxtjs',
+    vuedotjs: 'vue',
+    rollupdotjs: 'rollup',
+  }
+
+  const toSkillIconsSlug = (value) => {
+    const slug = String(value ?? '')
+    if (!slug) return ''
+    if (SKILLICONS_OVERRIDES[slug]) return SKILLICONS_OVERRIDES[slug]
+    if (slug.endsWith('dotjs')) return slug.replace(/dotjs$/, 'js')
+    return slug
+  }
+
+  const optionSlugBySkillSlug = {}
+  techOptions.forEach((icon) => {
+    optionSlugBySkillSlug[icon.slug] = icon.slug
+    optionSlugBySkillSlug[toSkillIconsSlug(icon.slug)] = icon.slug
+  })
+  const selected = new Set(
+    (c.items ?? []).map((slug) => {
+      const raw = String(slug ?? '')
+      return optionSlugBySkillSlug[raw] || optionSlugBySkillSlug[toSkillIconsSlug(raw)] || raw
+    }),
+  )
+
+  const brokenSet = useMemo(() => new Set(brokenIcons), [brokenIcons])
 
   const categories = useMemo(() => {
     const set = new Set(
@@ -135,13 +173,15 @@ const SkillsEditor = ({ section, updateSection, techOptions, fallbackIcon }) => 
   const filteredOptions = useMemo(() => {
     const term = query.trim().toLowerCase()
     return techOptions.filter((icon) => {
+      const skillSlug = toSkillIconsSlug(icon.slug)
+      if (!skillSlug || brokenSet.has(skillSlug)) return false
       const matchesQuery = term
         ? `${icon.title} ${icon.slug} ${icon.category}`.toLowerCase().includes(term)
         : true
       const matchesCategory = activeCategory === 'All' || icon.category === activeCategory
       return matchesQuery && matchesCategory
     })
-  }, [query, activeCategory, techOptions])
+  }, [query, activeCategory, techOptions, brokenSet])
 
   const PAGE_SIZE = 24
   const totalPages = Math.max(1, Math.ceil(filteredOptions.length / PAGE_SIZE))
@@ -208,12 +248,22 @@ const SkillsEditor = ({ section, updateSection, techOptions, fallbackIcon }) => 
               title={`${icon.title} · ${icon.category}`}
             >
               <img
-                src={`https://cdn.simpleicons.org/${icon.slug}`}
+                src={`https://skillicons.dev/icons?i=${toSkillIconsSlug(icon.slug)}&theme=dark`}
                 alt={icon.title}
                 className="h-6.5 w-6.5 self-center"
                 loading="lazy"
                 onError={(e) => {
                   e.currentTarget.src = fallbackIcon
+                  const skillSlug = toSkillIconsSlug(icon.slug)
+                  if (skillSlug) {
+                    if (!brokenSet.has(skillSlug)) {
+                      toast.error(`Icon not available: ${icon.title}`)
+                    }
+                    setBrokenIcons((prev) => (prev.includes(skillSlug) ? prev : [...prev, skillSlug]))
+                  }
+                  if ((c.items ?? []).includes(icon.slug)) {
+                    updateSection(section.id, { items: (c.items ?? []).filter((item) => item !== icon.slug) })
+                  }
                 }}
               />
               <span>{icon.title}</span>
@@ -282,10 +332,13 @@ const SocialsEditor = ({ section, updateSection, socialOptions, fallbackIcon }) 
     return socialIndex[normalized]?.slug ?? ''
   }
 
+  const getLinkSlug = (link) =>
+    toSocialSlug(link?.slug) || toSocialSlug(link?.label)
+
   const normalizedLinks = useMemo(
     () =>
       links.map((link) => {
-        const slug = link.slug || toSocialSlug(link.label)
+        const slug = toSocialSlug(link.slug) || toSocialSlug(link.label)
         if (!slug) return link
         const title = socialIndex[slug]?.title ?? link.label
         return { ...link, slug, label: title || link.label }
@@ -299,17 +352,34 @@ const SocialsEditor = ({ section, updateSection, socialOptions, fallbackIcon }) 
 
   const updateLinks = (next) => updateSection(section.id, { links: next })
 
-  const addSocial = (icon) => {
+const addSocial = (icon) => {
     if (selected.has(icon.slug)) return
+    
+    // Define the sample value based on the icon slug
+    const sampleUrls = {
+      discord: 'https://discord.gg/yourserver',
+      gmail: 'mailto:yourname@gmail.com',
+      github: 'https://github.com/yourusername',
+      linkedin: 'https://linkedin.com/in/yourusername',
+      twitter: 'https://x.com/yourusername',
+      instagram: 'https://instagram.com/yourusername'
+    }
+
+    const defaultUrl = sampleUrls[icon.slug] || 'https://example.com'
+
     updateLinks([
       ...normalizedLinks,
-      { label: icon.title, slug: icon.slug, url: '' },
+      { 
+        label: icon.title, 
+        slug: icon.slug, 
+        url: defaultUrl
+      },
     ])
   }
 
   const removeSocial = (slug) => {
     updateLinks(
-      normalizedLinks.filter((link) => (link.slug || toSocialSlug(link.label)) !== slug),
+      normalizedLinks.filter((link) => getLinkSlug(link) !== slug),
     )
   }
 
@@ -320,7 +390,7 @@ const SocialsEditor = ({ section, updateSection, socialOptions, fallbackIcon }) 
 
   const updateLink = (slug, field, value) => {
     const next = normalizedLinks.map((link) => {
-      const linkSlug = link.slug || toSocialSlug(link.label)
+      const linkSlug = getLinkSlug(link)
       if (linkSlug !== slug) return link
       return { ...link, slug: linkSlug, [field]: value }
     })
@@ -402,7 +472,7 @@ const SocialsEditor = ({ section, updateSection, socialOptions, fallbackIcon }) 
               title={`${icon.title} · ${icon.category}`}
             >
               <img
-                src={`https://cdn.simpleicons.org/${icon.slug}`}
+                src={`https://skillicons.dev/icons?i=${icon.slug}`}
                 alt={icon.title}
                 className="h-6.5 w-6.5 self-center"
                 loading="lazy"
@@ -443,7 +513,7 @@ const SocialsEditor = ({ section, updateSection, socialOptions, fallbackIcon }) 
       </div>
       <div className="grid gap-2.5">
         {normalizedLinks.map((link, index) => {
-          const slug = link.slug || toSocialSlug(link.label)
+          const slug = getLinkSlug(link)
           if (!slug) return null
           const icon = socialIndex[slug]
           const title = link.label || icon?.title || `Link ${index + 1}`
@@ -453,9 +523,9 @@ const SocialsEditor = ({ section, updateSection, socialOptions, fallbackIcon }) 
               className="grid gap-2 rounded-lg border border-zinc-800 bg-zinc-950 p-3"
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 select-none">
                   <img
-                    src={`https://cdn.simpleicons.org/${slug}`}
+                    src={`https://skillicons.dev/icons?i=${slug}`}
                     alt={title}
                     className="h-5 w-5"
                     loading="lazy"
