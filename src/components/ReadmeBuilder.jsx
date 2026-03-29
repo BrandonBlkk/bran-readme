@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import {
@@ -12,10 +12,9 @@ import {
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { toast } from 'sonner'
 import { AnimatePresence } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 import Navbar from './Navbar'
 import { Plus, Trash2, Sparkles } from 'lucide-react'
-import { techData } from '../utils/tech-data'
-import { socialData } from '../utils/social-data'
 import { labelClass, inputClass } from './readme-builder/FormFields'
 import SectionEditor from './readme-builder/SectionEditor'
 import Preview from './readme-builder/Preview'
@@ -23,8 +22,15 @@ import SortableSectionCard from './readme-builder/SortableSectionCard'
 import DragPreview from './readme-builder/DragPreview'
 import EmptyState from './readme-builder/EmptyState'
 import GithubModeToggle from './readme-builder/GithubModeToggle'
-
-const FALLBACK_ICON = 'https://cdn.simpleicons.org/simpleicons/999';
+import { PENDING_TEMPLATE_KEY } from '../constants/templateFlow'
+import { normalizeTemplatePayload } from '../utils/templatePayload'
+import {
+  generateMarkdown,
+  TECH_OPTIONS,
+  SOCIAL_OPTIONS,
+  FALLBACK_ICON,
+  buildStatsUrl,
+} from '../utils/markdown'
 
 /* ── Helpers ───────────────────────────────────────── */
 const createId = () => {
@@ -179,80 +185,11 @@ const useSectionStore = create(
   ),
 )
 
-/* ── Tech Icons ────────────────────────────────────── */
-const TECH_OPTIONS = techData.map((icon) => ({
-  title: icon.name,
-  slug: icon.slug,
-  category: icon.category,
-}))
-
-const TECH_ICON_MAP = TECH_OPTIONS.reduce((acc, icon) => {
-  acc[icon.slug] = icon
-  return acc
-}, {})
-
-const SOCIAL_OPTIONS = socialData.map((icon) => ({
-  title: icon.name,
-  slug: icon.slug,
-  category: icon.category,
-}))
-
-const SOCIAL_ICON_MAP = SOCIAL_OPTIONS.reduce((acc, icon) => {
-  acc[icon.slug] = icon
-  return acc
-}, {})
-
-const SKILLICONS_OVERRIDES = {
-  javascript: 'js',
-  typescript: 'ts',
-  cplusplus: 'cpp',
-  csharp: 'cs',
-  gnubash: 'bash',
-  postgresql: 'postgres',
-  rubyonrails: 'rails',
-  tailwindcss: 'tailwind',
-  nodedotjs: 'nodejs',
-  nextdotjs: 'nextjs',
-  nuxtdotjs: 'nuxtjs',
-  vuedotjs: 'vue',
-  rollupdotjs: 'rollup',
-}
-
-const TEXT_TAGS = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']
-const TEXT_ALIGNMENTS = ['left', 'center', 'right']
 const SECTION_TITLE_MAP = {
   stats: 'Stats',
   skills: 'Tech Stack',
   socials: 'Socials',
   about: 'About',
-}
-
-const toSkillIconsSlug = (value) => {
-  const slug = String(value ?? '')
-  if (!slug) return ''
-  if (SKILLICONS_OVERRIDES[slug]) return SKILLICONS_OVERRIDES[slug]
-  if (slug.endsWith('dotjs')) return slug.replace(/dotjs$/, 'js')
-  return slug
-}
-
-const normalizeKey = (value) =>
-  String(value ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
-
-const SOCIAL_SLUG_MAP = SOCIAL_OPTIONS.reduce((acc, icon) => {
-  acc[icon.slug.toLowerCase()] = icon.slug
-  acc[normalizeKey(icon.slug)] = icon.slug
-  acc[icon.title.toLowerCase()] = icon.slug
-  acc[normalizeKey(icon.title)] = icon.slug
-  return acc
-}, {})
-
-const toSocialSlug = (value) => {
-  const raw = String(value ?? '').trim()
-  if (!raw) return ''
-  const key = raw.toLowerCase()
-  if (SOCIAL_SLUG_MAP[key]) return SOCIAL_SLUG_MAP[key]
-  const normalized = normalizeKey(raw)
-  return SOCIAL_SLUG_MAP[normalized] ?? ''
 }
 
 const SECTION_LABELS = SECTION_LIBRARY.reduce((acc, item) => {
@@ -278,216 +215,9 @@ const SECTION_PILL_VARIANTS = {
 const getSectionPillClass = (type) =>
   `${SECTION_PILL_BASE} ${SECTION_PILL_VARIANTS[type] ?? 'text-zinc-500 border-zinc-800 bg-zinc-900'}`
 
-const sanitizeHex = (value) => String(value ?? '').replace('#', '').trim()
-
-/* ── Markdown Generators ───────────────────────────── */
-const buildStatsUrl = (content) => {
-  const url = new URL('https://github-readme-stats-delta-eight-12.vercel.app/api')
-  if (content.username) url.searchParams.set('username', content.username)
-  if (content.theme) url.searchParams.set('theme', content.theme)
-  if (content.showIcons) url.searchParams.set('show_icons', 'true')
-  if (content.hideBorder) url.searchParams.set('hide_border', 'true')
-  if (content.includeAllCommits) url.searchParams.set('include_all_commits', 'true')
-  if (content.countPrivate) url.searchParams.set('count_private', 'true')
-  if (content.rankIcon && content.rankIcon !== 'none')
-    url.searchParams.set('rank_icon', content.rankIcon)
-  if (content.bgColor) url.searchParams.set('bg_color', sanitizeHex(content.bgColor))
-  if (content.titleColor) url.searchParams.set('title_color', sanitizeHex(content.titleColor))
-  if (content.textColor) url.searchParams.set('text_color', sanitizeHex(content.textColor))
-  if (content.iconColor) url.searchParams.set('icon_color', sanitizeHex(content.iconColor))
-  if (content.borderRadius !== undefined)
-    url.searchParams.set('border_radius', String(content.borderRadius))
-  if (content.cardWidth) url.searchParams.set('card_width', String(content.cardWidth))
-  if (content.lineHeight) url.searchParams.set('line_height', String(content.lineHeight))
-  return url.toString()
-}
-
-const buildLanguageStatsUrl = (content) => {
-  const url = new URL('https://github-readme-stats-delta-eight-12.vercel.app/api/top-langs')
-  if (content.username) url.searchParams.set('username', content.username)
-  if (content.theme) url.searchParams.set('theme', content.theme)
-  if (content.hideBorder) url.searchParams.set('hide_border', 'true')
-  if (content.bgColor) url.searchParams.set('bg_color', sanitizeHex(content.bgColor))
-  if (content.titleColor) url.searchParams.set('title_color', sanitizeHex(content.titleColor))
-  if (content.textColor) url.searchParams.set('text_color', sanitizeHex(content.textColor))
-  if (content.borderRadius !== undefined)
-    url.searchParams.set('border_radius', String(content.borderRadius))
-  url.searchParams.set('layout', 'compact')
-  return url.toString()
-}
-
-const buildTrophyStatsUrl = (content) => {
-  const url = new URL('https://github-profile-trophy.screw-hand.vercel.app/')
-  if (content.username) url.searchParams.set('username', content.username)
-  const statsTheme = String(content.theme ?? '').toLowerCase()
-  const trophyTheme =
-    statsTheme === 'tokyonight' || statsTheme === 'radical' || statsTheme === 'dracula'
-      ? statsTheme
-      : 'onestar'
-  url.searchParams.set('theme', trophyTheme)
-  if (content.hideBorder) url.searchParams.set('no-frame', 'true')
-  if (content.bgColor || statsTheme === 'transparent') url.searchParams.set('no-bg', 'true')
-  url.searchParams.set('margin-w', '0')
-  url.searchParams.set('margin-h', '8')
-  return url.toString()
-}
-
-const headerBlock = (c) => {
-  const lines = []
-  if (c.name) lines.push(`# ${c.name}`)
-  if (c.tagline) lines.push(c.tagline)
-  const meta = []
-  if (c.location) meta.push(`Location: ${c.location}`)
-  if (c.website) meta.push(`[Website](${c.website})`)
-  if (meta.length) lines.push(meta.join(' | '))
-  return lines.join('\n\n')
-}
-
-const statsBlock = (c) => {
-  const mainCard = c.showMainStats !== false
-    ? { alt: 'GitHub Stats', src: buildStatsUrl(c) }
-    : null
-  const languageCard = c.showLanguageStats !== false
-    ? { alt: 'Top Languages', src: buildLanguageStatsUrl(c) }
-    : null
-  const trophyCard = c.showTrophyStats !== false
-    ? { alt: 'GitHub Trophies', src: buildTrophyStatsUrl(c) }
-    : null
-
-  if (!mainCard && !languageCard && !trophyCard) return 'Enable at least one GitHub card.'
-
-  const cardWidth = 390
-  const cardHeight = 195
-  const trophyWidth = 650
-  const renderTopCard = (card) =>
-    `<img src="${card.src}" alt="${card.alt}" width="${cardWidth}" height="${cardHeight}" />`
-  const renderTrophyCard = (card) =>
-    `<img src="${card.src}" alt="${card.alt}" width="${trophyWidth}" />`
-  const topRowCards = [mainCard, languageCard].filter(Boolean)
-  const topRow = topRowCards.length
-    ? `<div align="center">\n${topRowCards.map(renderTopCard).join('\n&nbsp;&nbsp;\n')}\n</div>`
-    : ''
-  const bottomRow = trophyCard
-    ? `<div align="center">\n${renderTrophyCard(trophyCard)}\n</div>`
-    : ''
-  const indentBlock = (block, baseDepth = 1) => {
-    let depth = 0
-    return String(block ?? '')
-      .split('\n')
-      .map((line) => {
-        const trimmed = line.trim()
-        if (!trimmed) return ''
-
-        if (trimmed.startsWith('</')) {
-          depth = Math.max(0, depth - 1)
-        }
-
-        const indented = `${'\t'.repeat(baseDepth + depth)}${trimmed}`
-
-        const isOpeningTag = /^<([a-z][^/\s>]*)\b[^>]*>$/i.test(trimmed)
-        const isSelfClosing = /\/>$/.test(trimmed)
-        if (isOpeningTag && !isSelfClosing) {
-          depth += 1
-        }
-
-        return indented
-      })
-      .join('\n')
-  }
-
-  return [
-    '<div align="center">',
-    topRow ? indentBlock(topRow) : '',
-    topRow && bottomRow ? '\t<br />' : '',
-    bottomRow ? indentBlock(bottomRow) : '',
-    '</div>',
-  ]
-    .filter(Boolean)
-    .join('\n')
-}
-
-const skillsBlock = (c) => {
-  const items = (c.items ?? [])
-    .map((slug) => TECH_ICON_MAP[slug] ?? { title: slug, slug })
-    .filter(Boolean)
-  if (!items.length) return 'Add your tech stack icons.'
-  const iconSize = Number(c.iconSize ?? 40) || 40
-  const icons = items
-    .map((icon) => {
-      const slug = toSkillIconsSlug(icon.slug)
-      const src = slug
-        ? `https://skillicons.dev/icons?i=${slug}&theme=dark`
-        : FALLBACK_ICON
-      return `<img src="${src}" alt="${icon.title}" width="${iconSize}" height="${iconSize}" />`
-    })
-    .join('&nbsp;&nbsp;')
-  return `${icons}`
-}
-
-const socialsBlock = (c) => {
-  const links = (c.links ?? [])
-    .map((link) => ({
-      ...link,
-      slug: link.slug || toSocialSlug(link.label),
-    }))
-    .filter((l) => l.label && l.url)
-  if (!links.length) return 'Add your social links.'
-  const iconLinks = links.filter((l) => l.slug)
-  const textLinks = links.filter((l) => !l.slug)
-  const iconSize = 28
-  const icons = iconLinks
-    .map((link) => {
-      const slug = link.slug || toSocialSlug(link.label)
-      const src = slug ? `https://skillicons.dev/icons?i=${slug}` : FALLBACK_ICON
-      const label = link.label || (SOCIAL_ICON_MAP[slug]?.title ?? slug)
-      return `<a href="${link.url}"><img src="${src}" alt="${label}" width="${iconSize}" height="${iconSize}" /></a>`
-    })
-    .join('&nbsp;&nbsp;')
-  const list = textLinks.length
-    ? textLinks.map((l) => `- [${l.label}](${l.url})`).join('\n')
-    : ''
-  if (icons && list) return `${icons}\n\n${list}`
-  if (icons) return icons
-  return list
-}
-
-const aboutBlock = (c) => {
-  if (!c.text) return ''
-  return `${c.text}`
-}
-
-const textBlock = (c) => {
-  const raw = String(c.text ?? '').trim()
-  if (!raw) return ''
-  const tagCandidate = String(c.size ?? 'p').toLowerCase()
-  const tag = TEXT_TAGS.includes(tagCandidate) ? tagCandidate : 'p'
-  const alignCandidate = String(c.align ?? 'left').toLowerCase()
-  const align = TEXT_ALIGNMENTS.includes(alignCandidate) ? alignCandidate : 'left'
-  const alignAttr = align !== 'left' ? ` align="${align}"` : ''
-  const dividerAttr = ` data-divider="${c.divider !== false}"`
-  const text = raw.replace(/\r?\n/g, '<br />')
-  return `<${tag}${alignAttr}${dividerAttr}>${text}</${tag}>`
-}
-
-const generateMarkdown = (sections) =>
-  sections
-    .map((s) => {
-      const c = s.content ?? {}
-      switch (s.type) {
-        case 'header': return headerBlock(c)
-        case 'stats': return statsBlock(c)
-        case 'skills': return skillsBlock(c)
-        case 'socials': return socialsBlock(c)
-        case 'about': return aboutBlock(c)
-        case 'text': return textBlock(c)
-        default: return ''
-      }
-    })
-    .filter(Boolean)
-    .join('\n\n')
-
 /* ── Main Component ────────────────────────────────── */
 const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
+  const navigate = useNavigate()
   const sections = useSectionStore((s) => s.sections)
   const previewTheme = useSectionStore((s) => s.previewTheme)
   const setPreviewTheme = useSectionStore((s) => s.setPreviewTheme)
@@ -529,7 +259,26 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
     }
   }, [markdown, isRawDirty])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const raw = window.sessionStorage.getItem(PENDING_TEMPLATE_KEY)
+    if (!raw) return
+    window.sessionStorage.removeItem(PENDING_TEMPLATE_KEY)
+
+    try {
+      const payload = normalizeTemplatePayload(JSON.parse(raw))
+      if (!payload.sections.length) return
+      setSections(payload.sections)
+      setPreviewTheme(payload.previewTheme)
+      toast.success('Template loaded from gallery.')
+    } catch {
+      // ignore invalid session payload
+    }
+  }, [setPreviewTheme, setSections])
+
   const parseRawToSections = (raw) => {
+    // This part is a bit complex but we reuse the logic from the original file
+    // For brevity in this replacement, I'll keep the core structure
     const existingByType = new Map()
     sections.forEach((section) => {
       if (!existingByType.has(section.type)) {
@@ -605,13 +354,13 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
 
     const sectionsOut = []
 
-    const addSection = (type, content) => {
+    const addSectionInt = (type, content) => {
       sectionsOut.push({ id: createId(), type, content })
     }
 
     const addTextTitle = (title) => {
       const base = baseContent('text')
-      addSection('text', {
+      addSectionInt('text', {
         ...base,
         text: title,
         size: 'h2',
@@ -624,7 +373,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
       const base = baseContent('about')
       const title = heading || 'About'
       if (title) addTextTitle(title)
-      addSection('about', {
+      addSectionInt('about', {
         ...base,
         text: text ?? '',
       })
@@ -633,7 +382,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
     blocks.forEach((block) => {
       if (block.type === 'text') {
         const base = baseContent('text')
-        addSection('text', {
+        addSectionInt('text', {
           ...base,
           text: block.text,
           size: block.tag,
@@ -660,14 +409,14 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
         let location = ''
         let website = ''
         if (metaText) {
-          metaText.split('|').map((part) => part.trim()).forEach((part) => {
-            const locationMatch = part.match(/^Location:\s*(.+)$/i)
-            if (locationMatch) location = locationMatch[1].trim()
-            const websiteMatch = part.match(/\[Website\]\(([^)]+)\)/i)
-            if (websiteMatch) website = websiteMatch[1].trim()
+          metaText.split('|').map((p) => p.trim()).forEach((p) => {
+            const lMatch = p.match(/^Location:\s*(.+)$/i)
+            if (lMatch) location = lMatch[1].trim()
+            const wMatch = p.match(/\[Website\]\(([^)]+)\)/i)
+            if (wMatch) website = wMatch[1].trim()
           })
         }
-        addSection('header', {
+        addSectionInt('header', {
           name: title,
           tagline,
           location,
@@ -713,8 +462,8 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
               || lower.includes('github-profile-trophy.vercel.app')
             )
           })
-          const referenceUrl = statsUrl || languageUrl || trophyUrl
           const hasStatsCardUrl = Boolean(statsUrl || languageUrl)
+          const referenceUrl = statsUrl || languageUrl || trophyUrl
 
           if (statsUrl || languageUrl || trophyUrl) {
             next.showMainStats = Boolean(statsUrl)
@@ -758,10 +507,10 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
                 applyNumber('lineHeight', 'line_height')
               }
             } catch {
-              // Keep base stats if URL parsing fails.
+              // Ignore invalid Reference URLs
             }
           }
-          addSection('stats', next)
+          addSectionInt('stats', next)
           return
         }
 
@@ -776,7 +525,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
             match = regex.exec(content)
           }
           const unique = Array.from(new Set(slugMatches))
-          addSection('skills', { ...base, items: unique })
+          addSectionInt('skills', { ...base, items: unique })
           return
         }
 
@@ -787,10 +536,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
           const iconRegex = /<a[^>]*href="([^"]+)"[^>]*>[\s\S]*?(?:cdn\.simpleicons\.org\/|skillicons\.dev\/icons\?i=)([a-z0-9-]+)[^"]*"[^>]*>[\s\S]*?<\/a>/gi
           let match = iconRegex.exec(content)
           while (match) {
-            const url = match[1].trim()
-            const slug = match[2].trim()
-            const label = SOCIAL_ICON_MAP[slug]?.title ?? slug
-            links.push({ label, slug, url })
+            links.push({ label: match[2].trim(), slug: match[2].trim(), url: match[1].trim() })
             match = iconRegex.exec(content)
           }
           if (!links.length) {
@@ -801,7 +547,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
               listMatch = regex.exec(content)
             }
           }
-          addSection('socials', { ...base, links })
+          addSectionInt('socials', { ...base, links })
           return
         }
 
@@ -855,12 +601,17 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
     toast.success('Template loaded!')
   }
 
+  const handleSaveTemplate = () => {
+    navigate('/templates?create=1')
+  }
+
   return (
     <div className="flex flex-1 flex-col">
       <Navbar
         onReset={handleResetDefaults}
         onCopy={handleCopyMarkdown}
         onOpenProjectModal={onOpenProjectModal}
+        onSaveTemplate={handleSaveTemplate}
       />
 
       <div
@@ -947,7 +698,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
                       items={sections.map((s) => s.id)}
                       strategy={verticalListSortingStrategy}
                     >
-                      <AnimatePresence>
+                      <AnimatePresence mode="popLayout">
                         {sections.map((section) => (
                           <SortableSectionCard
                             key={section.id}
