@@ -370,8 +370,40 @@ const statsBlock = (c) => {
   const bottomRow = trophyCard
     ? `<div align="center">\n${renderTrophyCard(trophyCard)}\n</div>`
     : ''
+  const indentBlock = (block, baseDepth = 1) => {
+    let depth = 0
+    return String(block ?? '')
+      .split('\n')
+      .map((line) => {
+        const trimmed = line.trim()
+        if (!trimmed) return ''
 
-  return `<div align="center">\n${topRow}${topRow && bottomRow ? '\n<br />\n' : ''}${bottomRow}\n</div>`
+        if (trimmed.startsWith('</')) {
+          depth = Math.max(0, depth - 1)
+        }
+
+        const indented = `${'\t'.repeat(baseDepth + depth)}${trimmed}`
+
+        const isOpeningTag = /^<([a-z][^/\s>]*)\b[^>]*>$/i.test(trimmed)
+        const isSelfClosing = /\/>$/.test(trimmed)
+        if (isOpeningTag && !isSelfClosing) {
+          depth += 1
+        }
+
+        return indented
+      })
+      .join('\n')
+  }
+
+  return [
+    '<div align="center">',
+    topRow ? indentBlock(topRow) : '',
+    topRow && bottomRow ? '\t<br />' : '',
+    bottomRow ? indentBlock(bottomRow) : '',
+    '</div>',
+  ]
+    .filter(Boolean)
+    .join('\n')
 }
 
 const skillsBlock = (c) => {
