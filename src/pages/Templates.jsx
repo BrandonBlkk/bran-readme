@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { LayoutGrid, Sparkles, Plus, Heart, Loader2, X } from 'lucide-react'
+import { LayoutGrid, Sparkles, Plus, Heart, Loader2, X, Eye } from 'lucide-react'
 import { toast } from 'sonner'
 import Sidebar from '../components/Sidebar'
 import TemplateMockup from '../components/TemplateMockup'
@@ -12,7 +12,10 @@ import {
   createSharedTemplate,
   fetchSharedTemplates,
   getBuiltinTemplates,
+  fetchFavorites,
+  toggleFavorite as toggleRemoteFavorite,
 } from '../services/templateService'
+import { getCurrentUser } from '../services/authService'
 import { PENDING_TEMPLATE_KEY } from '../constants/templateFlow'
 import { generateMarkdown } from '../utils/markdown'
 import { getPersistedBuilderSnapshot, sanitizeTags } from '../utils/templatePayload'
@@ -264,7 +267,7 @@ const TemplatePreviewModal = ({
           <motion.div
             role="dialog"
             aria-modal="true"
-            className="relative z-10 w-full max-w-240 rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-[0_30px_90px_rgba(0,0,0,0.55)]"
+            className="relative z-10 w-full max-w-242 rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-[0_30px_90px_rgba(0,0,0,0.55)]"
             initial={{ opacity: 0, scale: 0.96, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 12 }}
@@ -340,19 +343,9 @@ const Templates = () => {
   )
 
   useEffect(() => {
-    writeFavoriteIds(favorites)
-  }, [favorites])
-
-  useEffect(() => {
-    if (shouldOpenCreateModal) {
-      setIsCreateOpen(true)
-    }
-  }, [shouldOpenCreateModal])
-
-  useEffect(() => {
     let isMounted = true
 
-    const loadTemplates = async () => {
+    const loadData = async () => {
       if (!hasSupabaseConfig) {
         setIsLoading(false)
         return
@@ -361,13 +354,23 @@ const Templates = () => {
       try {
         setIsLoading(true)
         setLoadError('')
-        const remoteTemplates = await fetchSharedTemplates()
+        
+        // Load Templates and Favorites in parallel
+        const [remoteTemplates, user] = await Promise.all([
+          fetchSharedTemplates(),
+          getCurrentUser()
+        ])
+
         if (isMounted) {
           setCommunityTemplates(remoteTemplates)
+          if (user) {
+            const favIds = await fetchFavorites()
+            setFavorites(new Set(favIds))
+          }
         }
       } catch (error) {
         if (isMounted) {
-          setLoadError(error.message || 'Unable to load templates from Supabase.')
+          setLoadError(error.message || 'Unable to load data from Supabase.')
         }
       } finally {
         if (isMounted) {
@@ -376,18 +379,24 @@ const Templates = () => {
       }
     }
 
-    loadTemplates()
+    loadData()
     return () => {
       isMounted = false
     }
   }, [])
 
-  const toggleFavorite = (id) => {
-    setFavorites((prev) => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
+  const toggleFavorite = async (id) => {
+    try {
+      const isNowFavorited = await toggleRemoteFavorite(id)
+      setFavorites((prev) => {
+        const next = new Set(prev)
+        isNowFavorited ? next.add(id) : next.delete(id)
+        return next
+      })
+      toast.success(isNowFavorited ? 'Added to favorites' : 'Removed from favorites')
+    } catch (error) {
+      toast.error(error.message || 'Action failed')
+    }
   }
 
   const handleUseTemplate = (template) => {
@@ -460,13 +469,13 @@ const Templates = () => {
                   <div>
                     <h1 className="text-2xl font-semibold text-zinc-50 sm:text-3xl">Prebuilt README Templates</h1>
                     <p className="mt-3 max-w-2xl text-xs leading-relaxed text-zinc-400 sm:text-sm">
-                      Browse community templates from Supabase, then load one into the builder with a click.
+                      Browse community templates, then load one into the builder with a click.
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => setIsCreateOpen(true)}
-                      className="flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-600 transition-all cursor-pointer"
+                      className="flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-500 transition-all select-none cursor-pointer"
                     >
                       <Plus size={14} />
                       Create Template
@@ -553,10 +562,17 @@ const Templates = () => {
                           )}
                         </div>
 
-                        <div className="mt-6 grid grid-cols-1 gap-2">
+                        <div className="mt-6 grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => setPreviewTemplate({ ...template, previewMarkdown })}
+                            className="flex items-center justify-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 py-2.5 text-xs font-bold text-zinc-400 transition-all hover:bg-zinc-800 hover:text-zinc-200 active:scale-95 select-none cursor-pointer"
+                          >
+                            <Eye size={14} />
+                            Preview
+                          </button>
                           <button
                             onClick={() => handleUseTemplate(template)}
-                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-50 py-2.5 text-xs font-bold text-zinc-950 transition-all hover:bg-zinc-200 active:scale-95 select-none cursor-pointer"
+                            className="flex items-center justify-center gap-2 rounded-xl bg-zinc-50 py-2.5 text-xs font-bold text-zinc-950 transition-all hover:bg-zinc-200 active:scale-95 select-none cursor-pointer"
                           >
                             <Sparkles size={14} />
                             Use Template

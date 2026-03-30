@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { ExternalLink, Github, GitFork, Heart, Rocket } from 'lucide-react'
-import { useEffect } from 'react'
+import { ExternalLink, Github, GitFork, Heart, MessageSquare, Rocket } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import FeedbackModal from './feedback/FeedbackModal'
 
 const ProjectModal = ({ isOpen, onClose, projectUrl, sponsorUrl }) => {
   useEffect(() => {
@@ -13,6 +14,8 @@ const ProjectModal = ({ isOpen, onClose, projectUrl, sponsorUrl }) => {
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [isOpen, onClose])
+
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false)
 
   return (
     <AnimatePresence>
@@ -129,6 +132,18 @@ const ProjectModal = ({ isOpen, onClose, projectUrl, sponsorUrl }) => {
                 </a>
               </div>
 
+              <div className="rounded-xl border border-zinc-800 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-400 transition-all hover:bg-emerald-500/10 cursor-pointer select-none border-dashed"
+                onClick={() => setIsFeedbackOpen(true)}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <MessageSquare size={16} />
+                    Give Feedback
+                  </span>
+                  <span className="text-[10px] uppercase tracking-wider text-emerald-600">Improve this tool</span>
+                </div>
+              </div>
+
               <div className="rounded-xl border border-dashed border-zinc-800 px-4 py-3 text-xs text-zinc-500">
                 <p className="font-semibold uppercase tracking-[0.2em] text-zinc-400">
                   More Info
@@ -141,6 +156,7 @@ const ProjectModal = ({ isOpen, onClose, projectUrl, sponsorUrl }) => {
           </motion.div>
         </motion.div>
       )}
+      <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
     </AnimatePresence>
   )
 }

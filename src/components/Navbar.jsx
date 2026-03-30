@@ -1,5 +1,8 @@
-import { Copy } from 'lucide-react'
+import { Copy, User } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { getCurrentUser, onAuthStateChange, signOut } from '../services/authService'
+import AuthModal from './auth/AuthModal'
+import SignoutConfirmModal from './auth/SignoutConfirmModal'
 import profileImage from '../assets/images/Profile.png'
 import ResetButton from './ResetButton'
 import { Link } from 'react-router-dom'
@@ -13,6 +16,24 @@ const Navbar = ({ onReset, onCopy, onOpenProjectModal, onSaveTemplate }) => {
   const lastScrollY = useRef(0)
   const lastScrollTarget = useRef(null)
   const ignoreScrollUntil = useRef(0)
+  const [user, setUser] = useState(null)
+  const [isAuthOpen, setIsAuthOpen] = useState(false)
+  const [isSignoutOpen, setIsSignoutOpen] = useState(false)
+
+  const handleSignout = async () => {
+    try {
+      await signOut()
+      setIsSignoutOpen(false)
+    } catch (error) {
+      console.error('Signout Error:', error)
+    }
+  }
+
+  useEffect(() => {
+    getCurrentUser().then(setUser)
+    const { data: { subscription } } = onAuthStateChange(setUser)
+    return () => subscription.unsubscribe()
+  }, [])
 
   useEffect(() => {
     const element = navRef.current
@@ -113,6 +134,27 @@ const Navbar = ({ onReset, onCopy, onOpenProjectModal, onSaveTemplate }) => {
               v1.0
             </span>
           }
+
+          {!user ? (
+            <button
+              onClick={() => setIsAuthOpen(true)}
+              className="lg:hidden flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 transition-colors hover:text-white"
+            >
+              Sign In
+            </button>
+          ) : (
+            <button
+               onClick={() => setIsSignoutOpen(true)}
+               title={`Sign out (${user.user_metadata?.full_name || user.email})`}
+               className="lg:hidden flex items-center transition-opacity hover:opacity-80"
+            >
+              <img
+                src={user.user_metadata?.avatar_url || "/logo.svg"}
+                alt="Profile"
+                className="h-5 w-5 rounded-full border border-zinc-700"
+              />
+            </button>
+          )}
         </div>
 
         <button
@@ -161,8 +203,16 @@ const Navbar = ({ onReset, onCopy, onOpenProjectModal, onSaveTemplate }) => {
             Copy Markdown
           </button>
         </div>
-
       </header>
+
+      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+      <SignoutConfirmModal 
+        isOpen={isSignoutOpen} 
+        onClose={() => setIsSignoutOpen(false)} 
+        onConfirm={handleSignout} 
+        user={user}
+      />
+
       {/* The spacer div is also hidden on desktop since the nav isn't fixed there */}
       <div
         aria-hidden="true"

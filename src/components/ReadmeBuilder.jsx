@@ -14,7 +14,8 @@ import { toast } from 'sonner'
 import { AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import Navbar from './Navbar'
-import { Plus, Trash2, Sparkles } from 'lucide-react'
+import { Plus, Trash2, Sparkles, MessageSquare } from 'lucide-react'
+import FeedbackModal from './feedback/FeedbackModal'
 import { labelClass, inputClass } from './readme-builder/FormFields'
 import SectionEditor from './readme-builder/SectionEditor'
 import Preview from './readme-builder/Preview'
@@ -234,6 +235,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
   const [isRawDirty, setIsRawDirty] = useState(false)
   const [activeId, setActiveId] = useState(null)
   const [isEditorOpen, setIsEditorOpen] = useState(false)
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false)
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   )
@@ -819,6 +821,17 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
           </div>
         </div>
       </div>
+
+      {/* Floating Feedback Button */}
+      <button
+        onClick={() => setIsFeedbackOpen(true)}
+        className="fixed bottom-16 sm:bottom-6 right-3 sm:right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full border border-zinc-800 bg-zinc-950 text-emerald-500 shadow-2xl transition-all hover:scale-110 hover:border-emerald-500/50 hover:bg-emerald-500/10 cursor-pointer tooltip tooltip-left before:text-[11px] before:font-medium"
+        data-tip="Give Feedback"
+      >
+        <MessageSquare size={20} />
+      </button>
+
+      <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
     </div>
   )
 }
