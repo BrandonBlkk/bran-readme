@@ -9,8 +9,12 @@ import {
   GripVertical,
   Sparkles,
   Github,
+  MessageSquare,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { getCurrentUser, signOut, onAuthStateChange } from '../services/authService'
+import AuthModal from '../components/auth/AuthModal'
+import FeedbackModal from '../components/feedback/FeedbackModal'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 28 },
@@ -24,6 +28,15 @@ const stagger = {
 const LandingPage = () => {
     const [isBeta, setIsBeta] = useState(true);
     const [isScrolling, setIsScrolling] = useState(false);
+    const [user, setUser] = useState(null)
+    const [isAuthOpen, setIsAuthOpen] = useState(false)
+    const [isFeedbackOpen, setIsFeedbackOpen] = useState(false)
+
+    useEffect(() => {
+        getCurrentUser().then(setUser)
+        const { data: { subscription } } = onAuthStateChange(setUser)
+        return () => subscription.unsubscribe()
+    }, [])
 
     const handleScroll = () => {
         setIsScrolling(window.scrollY > 0);
@@ -80,6 +93,26 @@ const LandingPage = () => {
                     <a href="#features" className="transition-colors hover:text-white">Features</a>
                     <a href="#workflow" className="transition-colors hover:text-white">How It Works</a>
                     <a href="#templates" className="transition-colors hover:text-white">Templates</a>
+                    
+                    {user ? (
+                        <div className="flex items-center gap-4">
+                            <span className="text-xs text-zinc-500">Hi, {user.user_metadata?.full_name || user.email?.split('@')[0]}</span>
+                            <button
+                                onClick={() => signOut()}
+                                className="text-xs transition-colors hover:text-white"
+                            >
+                                Sign Out
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={() => setIsAuthOpen(true)}
+                            className="transition-colors hover:text-white"
+                        >
+                            Sign In
+                        </button>
+                    )}
+
                     <Link
                         to="/"
                         className="rounded-lg bg-white px-5 py-2 text-sm font-medium text-[#0a0a0a] transition-opacity hover:opacity-90"
@@ -428,8 +461,17 @@ const LandingPage = () => {
                 <a href="https://github.com/BrandonBlkk/bran-readme" target="_blank" rel="noreferrer" className="transition-colors hover:text-white">
                 <Github size={16} />
                 </a>
+                <button 
+                  onClick={() => setIsFeedbackOpen(true)}
+                  className="flex items-center gap-1.5 transition-colors hover:text-white"
+                >
+                  <MessageSquare size={14} />
+                  Feedback
+                </button>
             </div>
             </div>
+            <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+            <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
         </footer>
         </div>
     )

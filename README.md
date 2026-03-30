@@ -1,16 +1,40 @@
-# React + Vite
+# BranReadme
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+BranReadme is a React + Vite app for building GitHub profile README files with drag-and-drop sections, live preview, and template sharing.
 
-Currently, two official plugins are available:
+## Local Development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. Install dependencies:
 
-## React Compiler
+```bash
+npm install
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+2. Create `.env` in the project root:
 
-## Expanding the ESLint configuration
+```bash
+VITE_SUPABASE_URL=your-supabase-project-url
+VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+3. Start the app:
+
+```bash
+npm run dev
+```
+
+## Supabase Setup
+
+1. Create a Supabase project.
+2. Open the SQL Editor in Supabase.
+3. Create the `templates` table and policies in SQL Editor (including `sections` jsonb and `markdown` text columns).
+4. Copy your project URL + anon key into `.env`.
+
+The Templates page reads public templates from Supabase and allows creating new public templates from your current builder snapshot.
+
+## Scripts
+
+- `npm run dev` - start Vite dev server
+- `npm run build` - production build
+- `npm run lint` - ESLint
+- `npm run preview` - preview production build

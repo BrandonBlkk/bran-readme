@@ -96,6 +96,9 @@ const StatsEditor = ({ section, updateSection, buildStatsUrl }) => {
         </select>
       </Field>
       <div className="grid grid-cols-2 gap-2">
+        <Toggle label="Show Git Stats" checked={c.showMainStats !== false} onChange={(v) => updateSection(section.id, { showMainStats: v })} />
+        <Toggle label="Show Languages" checked={c.showLanguageStats !== false} onChange={(v) => updateSection(section.id, { showLanguageStats: v })} />
+        <Toggle label="Show Trophies" checked={c.showTrophyStats !== false} onChange={(v) => updateSection(section.id, { showTrophyStats: v })} />
         <Toggle label="Show Icons" checked={Boolean(c.showIcons)} onChange={(v) => updateSection(section.id, { showIcons: v })} />
         <Toggle label="Hide Border" checked={Boolean(c.hideBorder)} onChange={(v) => updateSection(section.id, { hideBorder: v })} />
         <Toggle label="All Commits" checked={Boolean(c.includeAllCommits)} onChange={(v) => updateSection(section.id, { includeAllCommits: v })} />
