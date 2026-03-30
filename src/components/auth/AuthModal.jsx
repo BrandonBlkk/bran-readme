@@ -78,7 +78,7 @@ const AuthModal = ({ isOpen, onClose }) => {
 
             <div className="flex flex-col items-center text-center">
               <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full border border-zinc-800 bg-zinc-900/50">
-                <img src="/logo.svg" alt="BranReadme Logo" className="h-8 w-8" />
+                <img src="/logo.png" alt="BranReadme Logo" className="h-8 w-8" />
               </div>
 
               <h2 className="text-2xl font-bold tracking-tight text-zinc-50">Welcome back</h2>
@@ -116,3 +116,4 @@ const AuthModal = ({ isOpen, onClose }) => {
 }
 
 export default AuthModal
+

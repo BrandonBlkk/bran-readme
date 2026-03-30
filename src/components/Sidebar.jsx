@@ -82,12 +82,12 @@ const Sidebar = ({ activePanel, onPanelChange }) => {
       {/* Logo mark */}
       <Link
         to="/landing"
-        className="mb-4 hidden h-8 w-8 items-center justify-center rounded-lg cursor-pointer lg:flex"
+        className="mb-4 hidden h-8 w-8 items-center justify-center cursor-pointer lg:flex"
       >
         <img
-          src="/logo.svg"
+          src="/logo.png"
           alt="Profile"
-          className="h-5 w-5 rounded-full select-none"
+          className="h-5 w-5 select-none"
         />
       </Link>
 
@@ -129,7 +129,7 @@ const Sidebar = ({ activePanel, onPanelChange }) => {
               className="flex h-10 w-10 items-center justify-center rounded-lg text-zinc-500 transition-all hover:bg-rose-500/10 hover:text-rose-500 lg:h-9 lg:w-9 cursor-pointer tooltip tooltip-left sm:tooltip-right before:text-[11px] before:font-medium"
             >
               <img
-                src={user.user_metadata?.avatar_url || "/logo.svg"}
+                src={user.user_metadata?.avatar_url || "/logo.png"}
                 alt="Profile"
                 className="h-6 w-6 rounded-full border border-zinc-700 transition-all group-hover:border-rose-500/50"
               />
@@ -159,3 +159,4 @@ const Sidebar = ({ activePanel, onPanelChange }) => {
 }
 
 export default Sidebar
+

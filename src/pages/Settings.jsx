@@ -294,7 +294,7 @@ const Settings = () => {
                   </p>
                   <button
                     type="button"
-                    className="mt-4 inline-flex items-center gap-2 rounded-lg border border-blue-500 bg-blue-500 px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-blue-600 cursor-pointer"
+                    className="mt-4 inline-flex items-center gap-2 rounded-lg bg-white text-xs font-medium text-[#0a0a0a] transition-opacity hover:opacity-90 px-3 py-2 cursor-pointer"
                   >
                     <Download size={14} />
                     Export JSON

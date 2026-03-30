@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { ExternalLink, Github, GitFork, Heart, MessageSquare, Rocket } from 'lucide-react'
+import { ExternalLink, Github, GitFork, Heart, MessageSquare, Rocket, Star } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import FeedbackModal from './feedback/FeedbackModal'
 
@@ -18,9 +18,11 @@ const ProjectModal = ({ isOpen, onClose, projectUrl, sponsorUrl }) => {
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false)
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
+    <>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            key="project-modal"
           className="fixed inset-0 z-50 flex items-center justify-center px-4 backdrop-blur-sm"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -90,7 +92,7 @@ const ProjectModal = ({ isOpen, onClose, projectUrl, sponsorUrl }) => {
                   className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-100 transition-all hover:border-zinc-700 hover:bg-[#1e1e22] select-none"
                 >
                   <span className="flex items-center gap-2">
-                    <Rocket size={16} />
+                    <Star size={16} />
                     Star Project
                   </span>
                 </a>
@@ -154,10 +156,11 @@ const ProjectModal = ({ isOpen, onClose, projectUrl, sponsorUrl }) => {
               </div>
             </div>
           </motion.div>
-        </motion.div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
       <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
-    </AnimatePresence>
+    </>
   )
 }
 

@@ -68,12 +68,12 @@ const LandingPage = () => {
                 <div className="flex items-center gap-2">
                     <Link
                         to="/landing"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg cursor-pointer"
+                        className="flex h-8 w-8 items-center justify-center cursor-pointer"
                     >
                         <img
-                        src="/logo.svg"
+                        src="/logo.png"
                         alt="Profile"
-                        className="h-5 w-5 rounded-full select-none"
+                        className="h-5 w-5 select-none"
                         />
                     </Link>
                     <span className="text-lg font-semibold tracking-tight text-white">
@@ -379,7 +379,7 @@ const LandingPage = () => {
                 </div>
                 <Link
                 to="/templates"
-                className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-[#262626] px-5 py-2.5 text-sm font-medium text-[#e5e5e5] transition-colors hover:border-[#404040] hover:text-white"
+                className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-[#262626] px-5 py-2.5 text-sm font-medium text-[#e5e5e5] transition-colors hover:border-[#404040] hover:text-white select-none"
                 >
                 View All
                 <ArrowRight size={14} />
@@ -478,3 +478,4 @@ const LandingPage = () => {
 }
 
 export default LandingPage
+

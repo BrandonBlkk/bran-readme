@@ -220,7 +220,7 @@ const CreateTemplateModal = ({
               <button
                 type="submit"
                 disabled={isSaving || !hasSnapshot}
-                className="flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-medium bg-white text-[#0a0a0a] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
               >
                 {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
                 Save & Share
@@ -384,6 +384,11 @@ const Templates = () => {
       isMounted = false
     }
   }, [])
+
+  useEffect(() => {
+    if (!shouldOpenCreateModal) return
+    setIsCreateOpen(true)
+  }, [shouldOpenCreateModal])
 
   const toggleFavorite = async (id) => {
     try {

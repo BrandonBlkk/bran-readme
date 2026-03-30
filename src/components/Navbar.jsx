@@ -149,7 +149,7 @@ const Navbar = ({ onReset, onCopy, onOpenProjectModal, onSaveTemplate }) => {
                className="lg:hidden flex items-center transition-opacity hover:opacity-80"
             >
               <img
-                src={user.user_metadata?.avatar_url || "/logo.svg"}
+                src={user.user_metadata?.avatar_url || "/logo.png"}
                 alt="Profile"
                 className="h-5 w-5 rounded-full border border-zinc-700"
               />
@@ -184,7 +184,7 @@ const Navbar = ({ onReset, onCopy, onOpenProjectModal, onSaveTemplate }) => {
             <button
               type="button"
               onClick={onSaveTemplate}
-              className="flex flex-1 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-blue-500/40 bg-blue-500/10 px-2 py-2 text-xs font-medium text-blue-200 transition-all duration-150 hover:border-blue-500 hover:bg-blue-500/20 cursor-pointer sm:px-2.5 lg:flex-none lg:px-3 lg:py-1.5"
+              className="flex flex-1 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-white px-2 py-2 text-xs font-medium text-[#0a0a0a] transition-opacity hover:opacity-90 duration-150 cursor-pointer sm:px-2.5 lg:flex-none lg:px-3 lg:py-1.5"
             >
               <span className="sm:hidden">Save</span>
               <span className="hidden sm:inline">Save Template</span>
@@ -224,3 +224,4 @@ const Navbar = ({ onReset, onCopy, onOpenProjectModal, onSaveTemplate }) => {
 }
 
 export default Navbar
+

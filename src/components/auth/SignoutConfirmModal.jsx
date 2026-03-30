@@ -34,7 +34,7 @@ const SignoutConfirmModal = ({ isOpen, onClose, onConfirm, user }) => {
                 <div className="absolute -inset-0.5 rounded-full" />
                 <div className="relative flex h-16 w-16 items-center justify-center rounded-full border border-zinc-800 bg-zinc-900 p-0.5 select-none">
                   <img
-                    src={user?.user_metadata?.avatar_url || "/logo.svg"}
+                    src={user?.user_metadata?.avatar_url || "/logo.png"}
                     alt="Profile"
                     className="h-full w-full rounded-full object-cover"
                   />
@@ -82,3 +82,4 @@ const SignoutConfirmModal = ({ isOpen, onClose, onConfirm, user }) => {
 }
 
 export default SignoutConfirmModal
+
