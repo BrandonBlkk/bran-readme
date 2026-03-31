@@ -123,37 +123,35 @@ const Navbar = ({ onReset, onCopy, onOpenProjectModal, onSaveTemplate }) => {
         }`}
       >
         <div className="flex items-center gap-3">
-          <Link to="/landing" className="text-sm font-semibold tracking-[-0.01em] text-zinc-50">
+          {/* Text: Shown on desktop (lg and up), hidden on mobile */}
+          <Link 
+            to="/landing" 
+            className="hidden lg:block text-sm font-semibold tracking-[-0.01em] text-zinc-50"
+          >
             BranReadme
           </Link>
-          { isBeta ?
+
+          {/* Logo: Shown on mobile, hidden on desktop (lg and up) */}
+          <Link
+            to="/landing"
+            className="flex lg:hidden h-8 w-8 items-center justify-center cursor-pointer"
+          >
+            <img
+              src="/logo.png"
+              alt="BranReadme Logo"
+              className="h-5 w-5 select-none"
+            />
+          </Link>
+
+          {/* Badge: Stays visible on both */}
+          {isBeta ? (
             <span className="rounded-full border border-rose-800 bg-zinc-900 px-2 py-0.5 text-[11px] font-medium text-rose-400 select-none">
               Beta
-            </span> :
+            </span>
+          ) : (
             <span className="rounded-full border border-zinc-600 bg-zinc-900 px-2 py-0.5 text-[11px] font-medium text-zinc-400 select-none">
               v1.0
             </span>
-          }
-
-          {!user ? (
-            <button
-              onClick={() => setIsAuthOpen(true)}
-              className="lg:hidden flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 transition-colors hover:text-white"
-            >
-              Sign In
-            </button>
-          ) : (
-            <button
-               onClick={() => setIsSignoutOpen(true)}
-               title={`Sign out (${user.user_metadata?.full_name || user.user_metadata?.name || user.email})`}
-               className="lg:hidden flex items-center transition-opacity hover:opacity-80"
-            >
-              <img
-                src={user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "/logo.png"}
-                alt="Profile"
-                className="h-5 w-5 rounded-full border border-zinc-700"
-              />
-            </button>
           )}
         </div>
 
