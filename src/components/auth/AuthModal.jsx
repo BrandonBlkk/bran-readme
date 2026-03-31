@@ -1,7 +1,14 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { Github, X } from 'lucide-react'
-import { signInWithGithub, signInWithGoogle } from '../../services/authService'
+import { useEffect, useState } from 'react'
+import {
+  getCurrentUser,
+  onAuthStateChange,
+  signInWithGithub,
+  signInWithGoogle,
+} from '../../services/authService'
 import { toast } from 'sonner'
+import Spinner from '../Spinner'
 
 const GoogleIcon = ({ size = 20 }) => (
   <svg
@@ -31,21 +38,81 @@ const GoogleIcon = ({ size = 20 }) => (
 )
 
 const AuthModal = ({ isOpen, onClose }) => {
+  const [isSigningIn, setIsSigningIn] = useState(false)
+  const [signingProvider, setSigningProvider] = useState(null)
+  const isGithubSigningIn = isSigningIn && signingProvider === 'github'
+  const isGoogleSigningIn = isSigningIn && signingProvider === 'google'
+
+  useEffect(() => {
+    if (!isOpen) {
+      setIsSigningIn(false)
+      setSigningProvider(null)
+      return
+    }
+
+    let active = true
+
+    const syncExistingSession = async () => {
+      const user = await getCurrentUser()
+      if (!active) return
+      if (user) {
+        setIsSigningIn(false)
+        setSigningProvider(null)
+        onClose()
+      }
+    }
+
+    syncExistingSession()
+
+    const { data: { subscription } } = onAuthStateChange((user) => {
+      if (!active) return
+      if (user) {
+        setIsSigningIn(false)
+        setSigningProvider(null)
+        onClose()
+      }
+    })
+
+    return () => {
+      active = false
+      subscription.unsubscribe()
+    }
+  }, [isOpen, onClose])
+
+  const handleClose = () => {
+    if (isSigningIn) return
+    onClose()
+  }
+
   const handleGithubLogin = async () => {
+    if (isSigningIn) return
     try {
-      await signInWithGithub()
-      onClose()
+      setIsSigningIn(true)
+      setSigningProvider('github')
+      const data = await signInWithGithub()
+      if (data?.url && typeof window !== 'undefined') {
+        window.location.assign(data.url)
+      }
     } catch (error) {
       toast.error('Login failed: ' + error.message)
+      setIsSigningIn(false)
+      setSigningProvider(null)
     }
   }
 
   const handleGoogleLogin = async () => {
+    if (isSigningIn) return
     try {
-      await signInWithGoogle()
-      onClose()
+      setIsSigningIn(true)
+      setSigningProvider('google')
+      const data = await signInWithGoogle()
+      if (data?.url && typeof window !== 'undefined') {
+        window.location.assign(data.url)
+      }
     } catch (error) {
       toast.error('Login failed: ' + error.message)
+      setIsSigningIn(false)
+      setSigningProvider(null)
     }
   }
 
@@ -60,7 +127,7 @@ const AuthModal = ({ isOpen, onClose }) => {
         >
           <motion.div
             className="absolute inset-0 bg-black/60"
-            onClick={onClose}
+            onClick={handleClose}
           />
           <motion.div
             className="relative w-full max-w-sm rounded-2xl border border-zinc-800 bg-zinc-950 p-8 shadow-2xl"
@@ -70,8 +137,9 @@ const AuthModal = ({ isOpen, onClose }) => {
             transition={{ type: 'spring', damping: 20, stiffness: 300 }}
           >
             <button
-              onClick={onClose}
-              className="absolute top-4 right-4 rounded-full p-2 text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200 cursor-pointer"
+              onClick={handleClose}
+              disabled={isSigningIn}
+              className="absolute top-4 right-4 rounded-full p-2 text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
             >
               <X size={18} />
             </button>
@@ -89,18 +157,22 @@ const AuthModal = ({ isOpen, onClose }) => {
               <div className="mt-8 flex w-full flex-col gap-3 select-none">
                 <button
                   onClick={handleGithubLogin}
-                  className="flex w-full items-center justify-center gap-3 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition-opacity hover:opacity-90 cursor-pointer"
+                  disabled={isSigningIn}
+                  className="flex w-full items-center justify-center gap-3 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer"
                 >
-                  <Github size={20} />
-                  Continue with GitHub
+                  {isGithubSigningIn ? <Spinner color='border-zinc-900' />
+                  : <Github size={20} />}
+                  {isGithubSigningIn ? 'Signing in...' : 'Continue with GitHub'}
                 </button>
 
                 <button
                   onClick={handleGoogleLogin}
-                  className="flex w-full items-center justify-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900 px-5 py-3 text-sm font-semibold text-zinc-100 transition-all hover:bg-zinc-800  cursor-pointer"
+                  disabled={isSigningIn}
+                  className="flex w-full items-center justify-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900 px-5 py-3 text-sm font-semibold text-zinc-100 transition-all hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
                 >
-                  <GoogleIcon size={20} />
-                  Continue with Google
+                  {isGoogleSigningIn ? <Spinner color='border-zinc-50' />
+                  : <GoogleIcon size={20} />}
+                  {isGoogleSigningIn ? 'Signing in...' : 'Continue with Google'}
                 </button>
               </div>
 

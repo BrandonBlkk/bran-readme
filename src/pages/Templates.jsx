@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { LayoutGrid, Sparkles, Plus, Heart, Loader2, X, Eye } from 'lucide-react'
+import { LayoutGrid, Sparkles, Plus, Heart, X, Eye } from 'lucide-react'
 import { toast } from 'sonner'
 import Sidebar from '../components/Sidebar'
 import TemplateMockup from '../components/TemplateMockup'
@@ -222,7 +222,7 @@ const CreateTemplateModal = ({
                 disabled={isSaving || !hasSnapshot}
                 className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-medium bg-white text-[#0a0a0a] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
               >
-                {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                {isSaving ? <Spinner color="border-zinc-900" /> : <Plus size={14} />}
                 Save & Share
               </button>
             </div>

@@ -163,7 +163,7 @@ const LandingPage = () => {
                 </Link>
                 <a
                     href="#features"
-                    className="inline-flex items-center justify-center rounded-lg border border-[#262626] px-6 py-3 text-sm font-medium text-[#e5e5e5] transition-colors hover:border-[#404040] hover:text-white"
+                    className="inline-flex items-center justify-center rounded-lg border border-[#262626] px-6 py-3 text-sm font-medium text-[#e5e5e5] transition-colors hover:border-[#404040] hover:text-white select-none"
                 >
                     See Features
                 </a>
@@ -186,7 +186,7 @@ const LandingPage = () => {
 
             {/* Hero Card - generator preview */}
             <motion.div variants={fadeUp}>
-                <div className="rounded-3xl border border-[#1c1c1c] bg-[#101010] p-3 shadow-[0_24px_70px_rgba(0,0,0,0.55)]">
+                <div className="rounded-3xl border border-[#1c1c1c] bg-[#101010] p-3 shadow-[0_24px_70px_rgba(0,0,0,0.55)] select-none">
                     <div className="flex items-center gap-1.5 pb-5">
                         <span className="h-2.5 w-2.5 rounded-full bg-red-500/50 border border-red-500/10" />
                         <span className="h-2.5 w-2.5 rounded-full bg-amber-500/50 border border-amber-500/10" />
