@@ -145,11 +145,11 @@ const Navbar = ({ onReset, onCopy, onOpenProjectModal, onSaveTemplate }) => {
           ) : (
             <button
                onClick={() => setIsSignoutOpen(true)}
-               title={`Sign out (${user.user_metadata?.full_name || user.email})`}
+               title={`Sign out (${user.user_metadata?.full_name || user.user_metadata?.name || user.email})`}
                className="lg:hidden flex items-center transition-opacity hover:opacity-80"
             >
               <img
-                src={user.user_metadata?.avatar_url || "/logo.png"}
+                src={user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "/logo.png"}
                 alt="Profile"
                 className="h-5 w-5 rounded-full border border-zinc-700"
               />
