@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import {
@@ -9,41 +9,29 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import {
-  SortableContext,
-  defaultAnimateLayoutChanges,
-  verticalListSortingStrategy,
-  useSortable,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-import ReactMarkdown from 'react-markdown'
-import rehypeRaw from 'rehype-raw'
-import remarkGfm from 'remark-gfm'
-import { toast, Toaster } from 'sonner'
-import { motion, AnimatePresence } from 'framer-motion'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { toast } from 'sonner'
+import { AnimatePresence } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 import Navbar from './Navbar'
+import { Plus, Trash2, Sparkles, MessageSquare } from 'lucide-react'
+import FeedbackModal from './feedback/FeedbackModal'
+import { labelClass, inputClass } from './readme-builder/FormFields'
+import SectionEditor from './readme-builder/SectionEditor'
+import Preview from './readme-builder/Preview'
+import SortableSectionCard from './readme-builder/SortableSectionCard'
+import DragPreview from './readme-builder/DragPreview'
+import EmptyState from './readme-builder/EmptyState'
+import GithubModeToggle from './readme-builder/GithubModeToggle'
+import { PENDING_TEMPLATE_KEY } from '../constants/templateFlow'
+import { normalizeTemplatePayload } from '../utils/templatePayload'
 import {
-  ChevronDown,
-  GripVertical,
-  Moon,
-  Plus,
-  Sun,
-  Trash2,
-  FileText,
-  Sparkles,
-} from 'lucide-react'
-import {
-  siReact,
-  siTypescript,
-  siJavascript,
-  siTailwindcss,
-  siVite,
-  siNodedotjs,
-  siPostgresql,
-  siMongodb,
-  siDocker,
-  siGithub,
-} from 'simple-icons/icons'
+  generateMarkdown,
+  TECH_OPTIONS,
+  SOCIAL_OPTIONS,
+  FALLBACK_ICON,
+  buildStatsUrl,
+} from '../utils/markdown'
 
 /* ── Helpers ───────────────────────────────────────── */
 const createId = () => {
@@ -63,13 +51,19 @@ const TEMPLATE_CONTENT = {
     location: 'San Francisco, CA',
     website: 'https://janedeveloper.dev',
   },
+  about: {
+    text: 'I build clean, fast developer tooling with a focus on UX and performance.',
+  },
   stats: {
     username: 'octocat',
     theme: 'transparent',
+    showMainStats: true,
+    showLanguageStats: true,
+    showTrophyStats: true,
     showIcons: true,
     hideBorder: true,
-    includeAllCommits: true,
-    countPrivate: true,
+    includeAllCommits: false,
+    countPrivate: false,
     rankIcon: 'github',
     bgColor: '#0d1117',
     titleColor: '#58a6ff',
@@ -81,28 +75,30 @@ const TEMPLATE_CONTENT = {
   },
   skills: {
     items: ['react', 'typescript', 'tailwindcss', 'vite', 'nodedotjs'],
-    iconSize: 26,
+    iconSize: 40,
   },
   socials: {
     links: [
-      { label: 'GitHub', url: 'https://github.com/username' },
-      { label: 'LinkedIn', url: 'https://linkedin.com/in/username' },
-      { label: 'X (Twitter)', url: 'https://x.com/username' },
-      { label: 'Website', url: 'https://username.dev' },
+      { label: 'LinkedIn', slug: 'linkedin', url: 'https://linkedin.com/in/username' },
+      { label: 'Instagram', slug: 'instagram', url: 'https://youtube.com/@username' },
+      { label: 'Discord', slug: 'discord', url: 'https://discord.gg/yourserver' },
     ],
   },
-  about: {
-    heading: 'About',
-    text: 'I build clean, fast developer tooling with a focus on UX and performance.',
+  text: {
+    text: "Hi, I'm Brandon 👋",
+    size: 'h2',
+    align: 'center',
+    divider: true,
   },
 }
 
 const SECTION_LIBRARY = [
   { type: 'header', label: 'Header', description: 'Name, tagline, and key links.' },
+  { type: 'about', label: 'About', description: 'Short bio or mission statement.' },
   { type: 'stats', label: 'GitHub Stats', description: 'Live stats card with theming controls.' },
   { type: 'skills', label: 'Skills Icons', description: 'Simple Icons tech stack strip.' },
   { type: 'socials', label: 'Social Links', description: 'Primary links and profiles.' },
-  { type: 'about', label: 'Text / About', description: 'Short bio or mission statement.' },
+  { type: 'text', label: 'Text Block', description: 'Custom text with size and alignment.' },
 ]
 
 const createSection = (type) => ({
@@ -111,12 +107,27 @@ const createSection = (type) => ({
   content: clone(TEMPLATE_CONTENT[type] ?? {}),
 })
 
+const createTextTitleSection = (title) => ({
+  id: createId(),
+  type: 'text',
+  content: {
+    text: title,
+    size: 'h2',
+    align: 'left',
+    divider: true,
+  },
+})
+
 const getDefaultSections = () => [
   createSection('header'),
-  createSection('stats'),
-  createSection('skills'),
-  createSection('socials'),
+  createTextTitleSection('About'),
   createSection('about'),
+  createTextTitleSection('Stats'),
+  createSection('stats'),
+  createTextTitleSection('Tech Stack'),
+  createSection('skills'),
+  createTextTitleSection('Socials'),
+  createSection('socials'),
 ]
 
 const moveItem = (list, fromIndex, toIndex) => {
@@ -135,7 +146,13 @@ const useSectionStore = create(
       setPreviewTheme: (theme) => set({ previewTheme: theme }),
       addSection: (type) =>
         set((state) => ({
-          sections: [...state.sections, createSection(type)],
+          sections: [
+            ...state.sections,
+            ...(SECTION_TITLE_MAP[type]
+              ? [createTextTitleSection(SECTION_TITLE_MAP[type])]
+              : []),
+            createSection(type),
+          ],
         })),
       removeSection: (id) =>
         set((state) => ({
@@ -169,21 +186,12 @@ const useSectionStore = create(
   ),
 )
 
-/* ── Tech Icons ────────────────────────────────────── */
-const TECH_OPTIONS = [
-  siReact, siTypescript, siJavascript, siTailwindcss, siVite,
-  siNodedotjs, siPostgresql, siMongodb, siDocker, siGithub,
-].map((icon) => ({
-  title: icon.title,
-  slug: icon.slug,
-  hex: `#${icon.hex}`,
-  path: icon.path,
-}))
-
-const TECH_ICON_MAP = TECH_OPTIONS.reduce((acc, icon) => {
-  acc[icon.slug] = icon
-  return acc
-}, {})
+const SECTION_TITLE_MAP = {
+  stats: 'Stats',
+  skills: 'Tech Stack',
+  socials: 'Socials',
+  about: 'About',
+}
 
 const SECTION_LABELS = SECTION_LIBRARY.reduce((acc, item) => {
   acc[item.type] = item.label
@@ -195,808 +203,39 @@ const SECTION_DESCRIPTIONS = SECTION_LIBRARY.reduce((acc, item) => {
   return acc
 }, {})
 
-const sanitizeHex = (value) => String(value ?? '').replace('#', '').trim()
-
-/* ── Markdown Generators ───────────────────────────── */
-const buildStatsUrl = (content) => {
-  const url = new URL('https://github-readme-stats.vercel.app/api')
-  if (content.username) url.searchParams.set('username', content.username)
-  if (content.theme) url.searchParams.set('theme', content.theme)
-  if (content.showIcons) url.searchParams.set('show_icons', 'true')
-  if (content.hideBorder) url.searchParams.set('hide_border', 'true')
-  if (content.includeAllCommits) url.searchParams.set('include_all_commits', 'true')
-  if (content.countPrivate) url.searchParams.set('count_private', 'true')
-  if (content.rankIcon && content.rankIcon !== 'none')
-    url.searchParams.set('rank_icon', content.rankIcon)
-  if (content.bgColor) url.searchParams.set('bg_color', sanitizeHex(content.bgColor))
-  if (content.titleColor) url.searchParams.set('title_color', sanitizeHex(content.titleColor))
-  if (content.textColor) url.searchParams.set('text_color', sanitizeHex(content.textColor))
-  if (content.iconColor) url.searchParams.set('icon_color', sanitizeHex(content.iconColor))
-  if (content.borderRadius !== undefined)
-    url.searchParams.set('border_radius', String(content.borderRadius))
-  if (content.cardWidth) url.searchParams.set('card_width', String(content.cardWidth))
-  if (content.lineHeight) url.searchParams.set('line_height', String(content.lineHeight))
-  return url.toString()
+const SECTION_PILL_BASE =
+  'inline-flex items-center gap-1 rounded-full border px-2 py-[2px] text-[10px] font-semibold uppercase tracking-[0.05em]'
+const SECTION_PILL_VARIANTS = {
+  header: 'text-[#a78bfa] border-[rgba(167,139,250,0.3)] bg-[rgba(167,139,250,0.08)]',
+  stats: 'text-[#34d399] border-[rgba(52,211,153,0.3)] bg-[rgba(52,211,153,0.08)]',
+  skills: 'text-[#fbbf24] border-[rgba(251,191,36,0.3)] bg-[rgba(251,191,36,0.08)]',
+  socials: 'text-[#60a5fa] border-[rgba(96,165,250,0.3)] bg-[rgba(96,165,250,0.08)]',
+  about: 'text-[#f472b6] border-[rgba(244,114,182,0.3)] bg-[rgba(244,114,182,0.08)]',
+  text: 'text-[#38bdf8] border-[rgba(56,189,248,0.3)] bg-[rgba(56,189,248,0.08)]',
 }
-
-const headerBlock = (c) => {
-  const lines = []
-  if (c.name) lines.push(`# ${c.name}`)
-  if (c.tagline) lines.push(c.tagline)
-  const meta = []
-  if (c.location) meta.push(`Location: ${c.location}`)
-  if (c.website) meta.push(`[Website](${c.website})`)
-  if (meta.length) lines.push(meta.join(' | '))
-  return lines.join('\n\n')
-}
-
-const statsBlock = (c) => `## Stats\n\n![GitHub Stats](${buildStatsUrl(c)})`
-
-const skillsBlock = (c) => {
-  const items = (c.items ?? []).map((slug) => TECH_ICON_MAP[slug]).filter(Boolean)
-  if (!items.length) return '## Tech Stack\n\nAdd your tech stack icons.'
-  const size = c.iconSize ?? 32
-  const icons = items
-    .map(
-      (icon) =>
-        `<img src="https://cdn.simpleicons.org/${icon.slug}/${sanitizeHex(icon.hex)}" alt="${icon.title}" />`,
-    )
-    .join(' ')
-  return `## Tech Stack\n\n${icons}`
-}
-
-const socialsBlock = (c) => {
-  const links = (c.links ?? []).filter((l) => l.label && l.url)
-  if (!links.length) return '## Socials\n\nAdd your social links.'
-  return `## Socials\n\n${links.map((l) => `- [${l.label}](${l.url})`).join('\n')}`
-}
-
-const aboutBlock = (c) => {
-  if (!c.text) return ''
-  return `## ${c.heading || 'About'}\n\n${c.text}`
-}
-
-const generateMarkdown = (sections) =>
-  sections
-    .map((s) => {
-      const c = s.content ?? {}
-      switch (s.type) {
-        case 'header': return headerBlock(c)
-        case 'stats': return statsBlock(c)
-        case 'skills': return skillsBlock(c)
-        case 'socials': return socialsBlock(c)
-        case 'about': return aboutBlock(c)
-        default: return ''
-      }
-    })
-    .filter(Boolean)
-    .join('\n\n')
-
-/* ── Shared Styles ─────────────────────────────────── */
-const inputStyle = {
-  width: '100%',
-  padding: '8px 12px',
-  fontSize: '13px',
-  fontFamily: 'var(--font-mono)',
-  color: 'var(--text-primary)',
-  background: 'var(--bg-base)',
-  border: '1px solid var(--border-default)',
-  borderRadius: 'var(--radius-md)',
-  outline: 'none',
-  transition: 'border-color 150ms ease, box-shadow 150ms ease',
-}
-
-const inputFocusProps = {
-  onFocus: (e) => {
-    e.currentTarget.style.borderColor = 'var(--accent)'
-    e.currentTarget.style.boxShadow = '0 0 0 3px var(--accent-muted)'
-  },
-  onBlur: (e) => {
-    e.currentTarget.style.borderColor = 'var(--border-default)'
-    e.currentTarget.style.boxShadow = 'none'
-  },
-}
-
-const labelStyle = {
-  fontSize: '11px',
-  fontWeight: 600,
-  textTransform: 'uppercase',
-  letterSpacing: '0.08em',
-  color: 'var(--text-muted)',
-  fontFamily: 'var(--font-sans)',
-}
-
-/* ── Form Components ───────────────────────────────── */
-const Field = ({ label, hint, children }) => (
-  <label style={{ display: 'block' }}>
-    <span style={{ ...labelStyle, display: 'block', marginBottom: '6px' }}>{label}</span>
-    {children}
-    {hint && (
-      <span style={{ display: 'block', marginTop: '4px', fontSize: '11px', color: 'var(--text-faint)' }}>
-        {hint}
-      </span>
-    )}
-  </label>
-)
-
-const Toggle = ({ label, checked, onChange }) => (
-  <button
-    type="button"
-    onClick={() => onChange(!checked)}
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      width: '100%',
-      padding: '8px 12px',
-      fontSize: '13px',
-      fontFamily: 'var(--font-sans)',
-      color: 'var(--text-primary)',
-      background: 'var(--bg-base)',
-      border: '1px solid var(--border-default)',
-      borderRadius: 'var(--radius-md)',
-      cursor: 'pointer',
-      transition: 'border-color 150ms ease',
-    }}
-  >
-    <span>{label}</span>
-    <span
-      style={{
-        position: 'relative',
-        display: 'inline-flex',
-        alignItems: 'center',
-        width: '36px',
-        height: '20px',
-        borderRadius: '10px',
-        background: checked ? 'var(--accent)' : 'var(--border-default)',
-        transition: 'background 200ms ease',
-      }}
-    >
-      <span
-        style={{
-          display: 'block',
-          width: '16px',
-          height: '16px',
-          borderRadius: '50%',
-          background: '#fff',
-          transform: checked ? 'translateX(18px)' : 'translateX(2px)',
-          transition: 'transform 200ms ease',
-        }}
-      />
-    </span>
-  </button>
-)
-
-const RangeField = ({ label, min, max, step = 1, value, onChange }) => (
-  <label style={{ display: 'block' }}>
-    <span style={{ ...labelStyle, display: 'block', marginBottom: '6px' }}>{label}</span>
-    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        style={{ flex: 1, accentColor: 'var(--accent)' }}
-      />
-      <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', minWidth: '28px', textAlign: 'right' }}>
-        {value}
-      </span>
-    </div>
-  </label>
-)
-
-const ColorField = ({ label, value, onChange }) => (
-  <label style={{ display: 'block' }}>
-    <span style={{ ...labelStyle, display: 'block', marginBottom: '6px' }}>{label}</span>
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '6px 10px',
-        background: 'var(--bg-base)',
-        border: '1px solid var(--border-default)',
-        borderRadius: 'var(--radius-md)',
-      }}
-    >
-      <input
-        type="color"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        style={{
-          width: '28px',
-          height: '28px',
-          padding: 0,
-          border: '1px solid var(--border-default)',
-          borderRadius: '4px',
-          background: 'transparent',
-          cursor: 'pointer',
-        }}
-      />
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        style={{
-          flex: 1,
-          background: 'transparent',
-          border: 'none',
-          outline: 'none',
-          fontFamily: 'var(--font-mono)',
-          fontSize: '12px',
-          color: 'var(--text-primary)',
-        }}
-      />
-    </div>
-  </label>
-)
-
-/* ── Section Card ──────────────────────────────────── */
-const SortableSectionCard = ({ section, children }) => {
-  const [isOpen, setIsOpen] = useState(true)
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: section.id,
-    animateLayoutChanges: defaultAnimateLayoutChanges,
-    transition: { duration: 200, easing: 'cubic-bezier(0.25, 1, 0.5, 1)' },
-  })
-
-  const dndStyle = {
-    transform: CSS.Transform.toString(transform),
-    transition: transition ?? undefined,
-    zIndex: isDragging ? 50 : undefined,
-  }
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={{
-        ...dndStyle,
-        padding: '16px',
-        background: 'var(--bg-surface)',
-        border: `1px solid ${isDragging ? 'var(--accent)' : 'var(--border-default)'}`,
-        borderRadius: 'var(--radius-lg)',
-        boxShadow: isDragging ? '0 0 24px var(--accent-glow)' : 'none',
-        opacity: isDragging ? 0.4 : 1,
-      }}
-    >
-      {/* Card Header */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '12px',
-          cursor: 'pointer',
-          userSelect: 'none',
-        }}
-        role="button"
-        tabIndex={0}
-        aria-expanded={isOpen}
-        onClick={() => setIsOpen((prev) => !prev)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            setIsOpen((prev) => !prev)
-          }
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button
-            type="button"
-            {...listeners}
-            {...attributes}
-            onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '28px',
-              height: '28px',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border-default)',
-              background: 'var(--bg-base)',
-              color: 'var(--text-muted)',
-              cursor: 'grab',
-              transition: 'all 150ms ease',
-            }}
-            aria-label="Drag to reorder"
-          >
-            <GripVertical size={14} />
-          </button>
-
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span
-                style={{
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: 'var(--text-primary)',
-                }}
-              >
-                {SECTION_LABELS[section.type]}
-              </span>
-              <span className="section-pill" data-type={section.type}>
-                {section.type}
-              </span>
-            </div>
-            <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '2px' }}>
-              {SECTION_DESCRIPTIONS[section.type]}
-            </p>
-          </div>
-        </div>
-
-        <motion.div
-          animate={{ rotate: isOpen ? 180 : 0 }}
-          transition={{ duration: 0.2 }}
-          style={{ color: 'var(--text-muted)' }}
-        >
-          <ChevronDown size={16} />
-        </motion.div>
-      </div>
-
-      {/* Card Body */}
-      <AnimatePresence initial={false}>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-            style={{ overflow: 'hidden' }}
-          >
-            <div style={{ paddingTop: '16px' }}>{children}</div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  )
-}
-
-/* ── Drag Ghost ────────────────────────────────────── */
-const DragPreview = ({ section }) => (
-  <div
-    className="drag-ghost"
-    style={{
-      padding: '10px 14px',
-      background: 'var(--bg-surface)',
-      border: '1px solid var(--accent)',
-      borderRadius: 'var(--radius-md)',
-    }}
-  >
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-      <GripVertical size={14} style={{ color: 'var(--text-muted)' }} />
-      <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
-        {SECTION_LABELS[section.type]}
-      </span>
-      <span className="section-pill" data-type={section.type}>
-        {section.type}
-      </span>
-    </div>
-  </div>
-)
-
-/* ── Empty State ───────────────────────────────────── */
-const EmptyState = ({ onQuickStart }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 16 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-    style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '48px 24px',
-      textAlign: 'center',
-      borderRadius: 'var(--radius-lg)',
-      border: '1px dashed var(--border-default)',
-      background: 'var(--bg-surface)',
-    }}
-  >
-    <div
-      style={{
-        width: '56px',
-        height: '56px',
-        borderRadius: 'var(--radius-lg)',
-        background: 'var(--accent-muted)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: '16px',
-        border: '1px solid rgba(59,130,246,0.15)',
-      }}
-    >
-      <FileText size={24} style={{ color: 'var(--accent)' }} />
-    </div>
-    <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>
-      Your README is empty
-    </h3>
-    <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px', maxWidth: '280px' }}>
-      Add sections from the panel above, or load a full template with one click.
-    </p>
-    <button
-      type="button"
-      onClick={onQuickStart}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        padding: '8px 16px',
-        fontSize: '13px',
-        fontWeight: 600,
-        fontFamily: 'var(--font-sans)',
-        color: '#fff',
-        background: 'var(--accent)',
-        border: '1px solid var(--accent)',
-        borderRadius: 'var(--radius-md)',
-        cursor: 'pointer',
-        transition: 'all 150ms ease',
-      }}
-    >
-      <Sparkles size={14} />
-      Quick Start
-    </button>
-  </motion.div>
-)
-
-/* ── Section Editors ───────────────────────────────── */
-const HeaderEditor = ({ section }) => {
-  const updateSection = useSectionStore((s) => s.updateSection)
-  const c = section.content ?? {}
-  return (
-    <div style={{ display: 'grid', gap: '12px' }}>
-      <Field label="Name">
-        <input style={inputStyle} value={c.name ?? ''} onChange={(e) => updateSection(section.id, { name: e.target.value })} placeholder="Jane Developer" {...inputFocusProps} />
-      </Field>
-      <Field label="Tagline">
-        <input style={inputStyle} value={c.tagline ?? ''} onChange={(e) => updateSection(section.id, { tagline: e.target.value })} placeholder="Designing developer experiences that ship" {...inputFocusProps} />
-      </Field>
-      <Field label="Location">
-        <input style={inputStyle} value={c.location ?? ''} onChange={(e) => updateSection(section.id, { location: e.target.value })} placeholder="San Francisco, CA" {...inputFocusProps} />
-      </Field>
-      <Field label="Website">
-        <input style={inputStyle} value={c.website ?? ''} onChange={(e) => updateSection(section.id, { website: e.target.value })} placeholder="https://janedeveloper.dev" {...inputFocusProps} />
-      </Field>
-    </div>
-  )
-}
-
-const StatsEditor = ({ section }) => {
-  const updateSection = useSectionStore((s) => s.updateSection)
-  const c = section.content ?? {}
-  const statsUrl = buildStatsUrl(c)
-  return (
-    <div style={{ display: 'grid', gap: '16px' }}>
-      <Field label="GitHub Username">
-        <input style={inputStyle} value={c.username ?? ''} onChange={(e) => updateSection(section.id, { username: e.target.value })} placeholder="octocat" {...inputFocusProps} />
-      </Field>
-      <Field label="Theme">
-        <select style={inputStyle} value={c.theme ?? 'transparent'} onChange={(e) => updateSection(section.id, { theme: e.target.value })}>
-          {['transparent', 'dark', 'tokyonight', 'radical', 'onedark', 'cobalt', 'nightowl', 'dracula'].map((t) => (
-            <option key={t} value={t}>{t}</option>
-          ))}
-        </select>
-      </Field>
-      <Field label="Rank Icon">
-        <select style={inputStyle} value={c.rankIcon ?? 'github'} onChange={(e) => updateSection(section.id, { rankIcon: e.target.value })}>
-          {['github', 'percent', 'none'].map((o) => (
-            <option key={o} value={o}>{o}</option>
-          ))}
-        </select>
-      </Field>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
-        <Toggle label="Show Icons" checked={Boolean(c.showIcons)} onChange={(v) => updateSection(section.id, { showIcons: v })} />
-        <Toggle label="Hide Border" checked={Boolean(c.hideBorder)} onChange={(v) => updateSection(section.id, { hideBorder: v })} />
-        <Toggle label="All Commits" checked={Boolean(c.includeAllCommits)} onChange={(v) => updateSection(section.id, { includeAllCommits: v })} />
-        <Toggle label="Count Private" checked={Boolean(c.countPrivate)} onChange={(v) => updateSection(section.id, { countPrivate: v })} />
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-        <ColorField label="Title Color" value={c.titleColor ?? '#58a6ff'} onChange={(v) => updateSection(section.id, { titleColor: v })} />
-        <ColorField label="Text Color" value={c.textColor ?? '#c9d1d9'} onChange={(v) => updateSection(section.id, { textColor: v })} />
-        <ColorField label="Icon Color" value={c.iconColor ?? '#58a6ff'} onChange={(v) => updateSection(section.id, { iconColor: v })} />
-        <ColorField label="BG Color" value={c.bgColor ?? '#0d1117'} onChange={(v) => updateSection(section.id, { bgColor: v })} />
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-        <RangeField label="Border Radius" min={0} max={24} value={c.borderRadius ?? 8} onChange={(v) => updateSection(section.id, { borderRadius: v })} />
-        <RangeField label="Card Width" min={300} max={600} value={c.cardWidth ?? 420} onChange={(v) => updateSection(section.id, { cardWidth: v })} />
-        <RangeField label="Line Height" min={18} max={40} value={c.lineHeight ?? 28} onChange={(v) => updateSection(section.id, { lineHeight: v })} />
-      </div>
-      <Field label="Preview URL" hint="Generated from the controls above.">
-        <input style={{ ...inputStyle, color: 'var(--text-muted)' }} value={statsUrl} readOnly />
-      </Field>
-    </div>
-  )
-}
-
-const SkillsEditor = ({ section }) => {
-  const updateSection = useSectionStore((s) => s.updateSection)
-  const c = section.content ?? {}
-  const selected = new Set(c.items ?? [])
-  const iconSize = c.iconSize ?? 32
-
-  const toggleSkill = (slug) => {
-    const next = new Set(selected)
-    if (next.has(slug)) next.delete(slug)
-    else next.add(slug)
-    updateSection(section.id, { items: Array.from(next) })
-  }
-
-  return (
-    <div style={{ display: 'grid', gap: '16px' }}>
-      <RangeField label="Icon Size" min={18} max={40} value={iconSize} onChange={(v) => updateSection(section.id, { iconSize: v })} />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
-        {TECH_OPTIONS.map((icon) => {
-          const isActive = selected.has(icon.slug)
-          return (
-            <button
-              key={icon.slug}
-              type="button"
-              onClick={() => toggleSkill(icon.slug)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 10px',
-                fontSize: '12px',
-                fontFamily: 'var(--font-sans)',
-                textAlign: 'left',
-                borderRadius: 'var(--radius-md)',
-                border: `1px solid ${isActive ? 'var(--accent)' : 'var(--border-default)'}`,
-                background: isActive ? 'var(--accent-muted)' : 'var(--bg-base)',
-                color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                cursor: 'pointer',
-                transition: 'all 150ms ease',
-              }}
-            >
-              <svg viewBox="0 0 24 24" style={{ width: '16px', height: '16px', fill: icon.hex, flexShrink: 0 }} role="img" aria-label={icon.title}>
-                <path d={icon.path} />
-              </svg>
-              <span>{icon.title}</span>
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-const SocialsEditor = ({ section }) => {
-  const updateSection = useSectionStore((s) => s.updateSection)
-  const c = section.content ?? {}
-  const links = c.links ?? []
-
-  const updateLink = (index, field, value) => {
-    const next = links.map((link, idx) => (idx === index ? { ...link, [field]: value } : link))
-    updateSection(section.id, { links: next })
-  }
-  const removeLink = (index) => {
-    updateSection(section.id, { links: links.filter((_, idx) => idx !== index) })
-  }
-  const addLink = () => {
-    updateSection(section.id, { links: [...links, { label: '', url: '' }] })
-  }
-
-  return (
-    <div style={{ display: 'grid', gap: '10px' }}>
-      {links.map((link, index) => (
-        <div
-          key={`${link.label}-${index}`}
-          style={{
-            display: 'grid',
-            gap: '8px',
-            padding: '12px',
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--border-default)',
-            background: 'var(--bg-base)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={labelStyle}>Link {index + 1}</span>
-            <button
-              type="button"
-              onClick={() => removeLink(index)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '24px',
-                height: '24px',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid var(--border-default)',
-                background: 'transparent',
-                color: 'var(--text-muted)',
-                cursor: 'pointer',
-                transition: 'all 150ms ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'var(--danger)'
-                e.currentTarget.style.color = 'var(--danger)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'var(--border-default)'
-                e.currentTarget.style.color = 'var(--text-muted)'
-              }}
-            >
-              <Trash2 size={12} />
-            </button>
-          </div>
-          <input style={inputStyle} value={link.label ?? ''} onChange={(e) => updateLink(index, 'label', e.target.value)} placeholder="Label" {...inputFocusProps} />
-          <input style={inputStyle} value={link.url ?? ''} onChange={(e) => updateLink(index, 'url', e.target.value)} placeholder="https://example.com" {...inputFocusProps} />
-        </div>
-      ))}
-      <button
-        type="button"
-        onClick={addLink}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '6px',
-          padding: '8px',
-          fontSize: '12px',
-          fontWeight: 600,
-          fontFamily: 'var(--font-sans)',
-          color: 'var(--text-muted)',
-          background: 'transparent',
-          border: '1px dashed var(--border-default)',
-          borderRadius: 'var(--radius-md)',
-          cursor: 'pointer',
-          transition: 'all 150ms ease',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = 'var(--border-muted)'
-          e.currentTarget.style.color = 'var(--text-secondary)'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = 'var(--border-default)'
-          e.currentTarget.style.color = 'var(--text-muted)'
-        }}
-      >
-        <Plus size={14} />
-        Add Link
-      </button>
-    </div>
-  )
-}
-
-const AboutEditor = ({ section }) => {
-  const updateSection = useSectionStore((s) => s.updateSection)
-  const c = section.content ?? {}
-  return (
-    <div style={{ display: 'grid', gap: '12px' }}>
-      <Field label="Heading">
-        <input style={inputStyle} value={c.heading ?? ''} onChange={(e) => updateSection(section.id, { heading: e.target.value })} placeholder="About" {...inputFocusProps} />
-      </Field>
-      <Field label="Body">
-        <textarea
-          style={{ ...inputStyle, minHeight: '100px', resize: 'vertical' }}
-          value={c.text ?? ''}
-          onChange={(e) => updateSection(section.id, { text: e.target.value })}
-          placeholder="Tell the world what you are building."
-          {...inputFocusProps}
-        />
-      </Field>
-    </div>
-  )
-}
-
-const SectionEditor = ({ section }) => {
-  switch (section.type) {
-    case 'header': return <HeaderEditor section={section} />
-    case 'stats': return <StatsEditor section={section} />
-    case 'skills': return <SkillsEditor section={section} />
-    case 'socials': return <SocialsEditor section={section} />
-    case 'about': return <AboutEditor section={section} />
-    default: return null
-  }
-}
-
-/* ── Preview ───────────────────────────────────────── */
-const Preview = ({ markdown, previewTheme }) => {
-  const themeClass = previewTheme === 'dark' ? 'github-preview-dark' : 'github-preview-light'
-
-  return (
-    <div
-      className={themeClass}
-      style={{
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid var(--border-default)',
-        maxWidth: '880px',
-        width: '100%',
-        boxShadow: 'var(--shadow-md)',
-      }}
-    >
-      <div style={{ padding: '32px 40px' }}>
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          rehypePlugins={[rehypeRaw]}
-        >
-          {markdown}
-        </ReactMarkdown>
-        {!markdown && (
-          <p style={{ fontSize: '14px', color: 'var(--gh-muted, var(--text-muted))' }}>
-            Start adding sections to see the preview.
-          </p>
-        )}
-      </div>
-    </div>
-  )
-}
-
-/* ── GitHub Mode Toggle ────────────────────────────── */
-const GithubModeToggle = () => {
-  const previewTheme = useSectionStore((s) => s.previewTheme)
-  const setPreviewTheme = useSectionStore((s) => s.setPreviewTheme)
-
-  const btnBase = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    padding: '4px 10px',
-    fontSize: '12px',
-    fontWeight: 500,
-    fontFamily: 'var(--font-sans)',
-    borderRadius: 'var(--radius-sm)',
-    border: '1px solid transparent',
-    cursor: 'pointer',
-    transition: 'all 150ms ease',
-  }
-
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '2px',
-        padding: '3px',
-        background: 'var(--bg-base)',
-        borderRadius: 'var(--radius-md)',
-        border: '1px solid var(--border-default)',
-      }}
-    >
-      <button
-        type="button"
-        onClick={() => setPreviewTheme('dark')}
-        style={{
-          ...btnBase,
-          background: previewTheme === 'dark' ? 'var(--bg-surface)' : 'transparent',
-          color: previewTheme === 'dark' ? 'var(--text-primary)' : 'var(--text-muted)',
-          border: previewTheme === 'dark' ? '1px solid var(--border-default)' : '1px solid transparent',
-        }}
-      >
-        <Moon size={12} />
-        Dark
-      </button>
-      <button
-        type="button"
-        onClick={() => setPreviewTheme('light')}
-        style={{
-          ...btnBase,
-          background: previewTheme === 'light' ? 'var(--bg-surface)' : 'transparent',
-          color: previewTheme === 'light' ? 'var(--text-primary)' : 'var(--text-muted)',
-          border: previewTheme === 'light' ? '1px solid var(--border-default)' : '1px solid transparent',
-        }}
-      >
-        <Sun size={12} />
-        Light
-      </button>
-    </div>
-  )
-}
+const getSectionPillClass = (type) =>
+  `${SECTION_PILL_BASE} ${SECTION_PILL_VARIANTS[type] ?? 'text-zinc-500 border-zinc-800 bg-zinc-900'}`
 
 /* ── Main Component ────────────────────────────────── */
-const ReadmeBuilder = ({ activePanel }) => {
+const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
+  const navigate = useNavigate()
   const sections = useSectionStore((s) => s.sections)
   const previewTheme = useSectionStore((s) => s.previewTheme)
+  const setPreviewTheme = useSectionStore((s) => s.setPreviewTheme)
   const addSection = useSectionStore((s) => s.addSection)
   const removeSection = useSectionStore((s) => s.removeSection)
   const moveSection = useSectionStore((s) => s.moveSection)
+  const setSections = useSectionStore((s) => s.setSections)
+  const updateSection = useSectionStore((s) => s.updateSection)
   const resetToDefaults = useSectionStore((s) => s.resetToDefaults)
 
   const markdown = useMemo(() => generateMarkdown(sections), [sections])
+  const [isRawMode, setIsRawMode] = useState(false)
+  const [rawMarkdown, setRawMarkdown] = useState('')
+  const [isRawDirty, setIsRawDirty] = useState(false)
   const [activeId, setActiveId] = useState(null)
+  const [isEditorOpen, setIsEditorOpen] = useState(false)
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false)
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   )
@@ -1005,6 +244,325 @@ const ReadmeBuilder = ({ activePanel }) => {
     [activeId, sections],
   )
 
+  useEffect(() => {
+    if (activeId) {
+      document.body.style.cursor = 'grabbing'
+    } else {
+      document.body.style.cursor = ''
+    }
+    return () => {
+      document.body.style.cursor = ''
+    }
+  }, [activeId])
+
+  useEffect(() => {
+    if (!isRawDirty) {
+      setRawMarkdown(markdown)
+    }
+  }, [markdown, isRawDirty])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const raw = window.sessionStorage.getItem(PENDING_TEMPLATE_KEY)
+    if (!raw) return
+    window.sessionStorage.removeItem(PENDING_TEMPLATE_KEY)
+
+    try {
+      const payload = normalizeTemplatePayload(JSON.parse(raw))
+      if (!payload.sections.length) return
+      setSections(payload.sections)
+      setPreviewTheme(payload.previewTheme)
+      toast.success('Template loaded from gallery.')
+    } catch {
+      // ignore invalid session payload
+    }
+  }, [setPreviewTheme, setSections])
+
+  const parseRawToSections = (raw) => {
+    // This part is a bit complex but we reuse the logic from the original file
+    // For brevity in this replacement, I'll keep the core structure
+    const existingByType = new Map()
+    sections.forEach((section) => {
+      if (!existingByType.has(section.type)) {
+        existingByType.set(section.type, section)
+      }
+    })
+
+    const baseContent = (type) => {
+      const base = existingByType.get(type)?.content ?? TEMPLATE_CONTENT[type] ?? {}
+      return clone(base)
+    }
+
+    const splitParagraphs = (text) =>
+      text
+        .split(/\n\s*\n/)
+        .map((part) => part.trim())
+        .filter(Boolean)
+
+    const parseTextTag = (line) => {
+      const match = line.match(/^<(p|h[1-6])\s*([^>]*)>([\s\S]*)<\/\1>\s*$/i)
+      if (!match) return null
+      const tag = match[1].toLowerCase()
+      const attrs = match[2] ?? ''
+      const alignMatch = attrs.match(/align="(left|center|right)"/i)
+      const dividerMatch = attrs.match(/data-divider="(true|false)"/i)
+      const align = (alignMatch?.[1] ?? 'left').toLowerCase()
+      const divider = dividerMatch ? dividerMatch[1].toLowerCase() !== 'false' : true
+      const text = match[3]
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/&nbsp;/gi, ' ')
+        .trim()
+      return { tag, align, text, divider }
+    }
+
+    const blocks = []
+    let current = { type: 'free', lines: [] }
+
+    const pushCurrent = () => {
+      if (current && current.lines.length) {
+        blocks.push(current)
+      }
+      current = null
+    }
+
+    const lines = String(raw ?? '').replace(/\r\n/g, '\n').split('\n')
+    lines.forEach((line) => {
+      const match = line.match(/^(#{1,2})\s+(.*)$/)
+      if (match) {
+        pushCurrent()
+        current = {
+          type: 'heading',
+          level: match[1].length,
+          title: match[2].trim(),
+          lines: [],
+        }
+        return
+      }
+      const textMatch = parseTextTag(line)
+      if (textMatch) {
+        pushCurrent()
+        blocks.push({ type: 'text', ...textMatch })
+        current = { type: 'free', lines: [] }
+        return
+      }
+      if (!current) {
+        current = { type: 'free', lines: [] }
+      }
+      if (current) {
+        current.lines.push(line)
+      }
+    })
+    pushCurrent()
+
+    const sectionsOut = []
+
+    const addSectionInt = (type, content) => {
+      sectionsOut.push({ id: createId(), type, content })
+    }
+
+    const addTextTitle = (title) => {
+      const base = baseContent('text')
+      addSectionInt('text', {
+        ...base,
+        text: title,
+        size: 'h2',
+        align: 'left',
+        divider: true,
+      })
+    }
+
+    const addAboutSection = (heading, text) => {
+      const base = baseContent('about')
+      const title = heading || 'About'
+      if (title) addTextTitle(title)
+      addSectionInt('about', {
+        ...base,
+        text: text ?? '',
+      })
+    }
+
+    blocks.forEach((block) => {
+      if (block.type === 'text') {
+        const base = baseContent('text')
+        addSectionInt('text', {
+          ...base,
+          text: block.text,
+          size: block.tag,
+          align: block.align,
+          divider: block.divider,
+        })
+        return
+      }
+
+      if (block.type === 'free') {
+        const content = block.lines.join('\n').trim()
+        if (content) addAboutSection('About', content)
+        return
+      }
+
+      const title = block.title.trim()
+      const titleLower = title.toLowerCase()
+      const content = block.lines.join('\n').trim()
+
+      if (block.level === 1) {
+        const paragraphs = splitParagraphs(content)
+        const tagline = paragraphs[0] ? paragraphs[0].replace(/\n+/g, ' ').trim() : ''
+        const metaText = paragraphs.slice(1).join(' | ')
+        let location = ''
+        let website = ''
+        if (metaText) {
+          metaText.split('|').map((p) => p.trim()).forEach((p) => {
+            const lMatch = p.match(/^Location:\s*(.+)$/i)
+            if (lMatch) location = lMatch[1].trim()
+            const wMatch = p.match(/\[Website\]\(([^)]+)\)/i)
+            if (wMatch) website = wMatch[1].trim()
+          })
+        }
+        addSectionInt('header', {
+          name: title,
+          tagline,
+          location,
+          website,
+        })
+        return
+      }
+
+      if (block.level === 2) {
+        if (titleLower === 'stats' || titleLower === 'github stats') {
+          addTextTitle(title)
+          const base = baseContent('stats')
+          const next = { ...base }
+          const imageUrls = []
+          const markdownImageRegex = /!\[[^\]]*\]\(([^)]+)\)/g
+          let markdownMatch = markdownImageRegex.exec(content)
+          while (markdownMatch) {
+            imageUrls.push(markdownMatch[1].trim())
+            markdownMatch = markdownImageRegex.exec(content)
+          }
+          const htmlImageRegex = /<img[^>]*src="([^"]+)"/gi
+          let htmlMatch = htmlImageRegex.exec(content)
+          while (htmlMatch) {
+            imageUrls.push(htmlMatch[1].trim())
+            htmlMatch = htmlImageRegex.exec(content)
+          }
+
+          const statsUrl = imageUrls.find((urlValue) => {
+            const lower = urlValue.toLowerCase()
+            return (
+              lower.includes('github-readme-stats-delta-eight-12.vercel.app/api')
+              && !lower.includes('/api/top-langs')
+            )
+          })
+          const languageUrl = imageUrls.find((urlValue) =>
+            urlValue.toLowerCase().includes('github-readme-stats-delta-eight-12.vercel.app/api/top-langs'),
+          )
+          const trophyUrl = imageUrls.find((urlValue) => {
+            const lower = urlValue.toLowerCase()
+            return (
+              lower.includes('github-profile-trophy.screw-hand.vercel.app')
+              || lower.includes('github-profile-trophy-alpha-ecru.vercel.app')
+              || lower.includes('github-profile-trophy.vercel.app')
+            )
+          })
+          const hasStatsCardUrl = Boolean(statsUrl || languageUrl)
+          const referenceUrl = statsUrl || languageUrl || trophyUrl
+
+          if (statsUrl || languageUrl || trophyUrl) {
+            next.showMainStats = Boolean(statsUrl)
+            next.showLanguageStats = Boolean(languageUrl)
+            next.showTrophyStats = Boolean(trophyUrl)
+          }
+
+          if (referenceUrl) {
+            try {
+              const url = new URL(referenceUrl)
+              const params = url.searchParams
+              if (params.has('username')) next.username = params.get('username') ?? ''
+              if (hasStatsCardUrl) {
+                if (params.has('theme')) next.theme = params.get('theme') ?? ''
+                if (params.has('show_icons')) next.showIcons = params.get('show_icons') === 'true'
+                if (params.has('hide_border')) next.hideBorder = params.get('hide_border') === 'true'
+                if (params.has('include_all_commits'))
+                  next.includeAllCommits = params.get('include_all_commits') === 'true'
+                if (params.has('count_private'))
+                  next.countPrivate = params.get('count_private') === 'true'
+                if (params.has('rank_icon')) next.rankIcon = params.get('rank_icon') ?? ''
+
+                const applyColor = (field, key) => {
+                  if (!params.has(key)) return
+                  const value = params.get(key) ?? ''
+                  const clean = value.replace('#', '').trim()
+                  if (clean) next[field] = `#${clean}`
+                }
+                applyColor('bgColor', 'bg_color')
+                applyColor('titleColor', 'title_color')
+                applyColor('textColor', 'text_color')
+                applyColor('iconColor', 'icon_color')
+
+                const applyNumber = (field, key) => {
+                  if (!params.has(key)) return
+                  const value = Number(params.get(key))
+                  if (!Number.isNaN(value)) next[field] = value
+                }
+                applyNumber('borderRadius', 'border_radius')
+                applyNumber('cardWidth', 'card_width')
+                applyNumber('lineHeight', 'line_height')
+              }
+            } catch {
+              // Ignore invalid Reference URLs
+            }
+          }
+          addSectionInt('stats', next)
+          return
+        }
+
+        if (titleLower === 'tech stack' || titleLower === 'skills' || titleLower === 'skills icons') {
+          addTextTitle(title)
+          const base = baseContent('skills')
+          const slugMatches = []
+          const regex = /cdn\.simpleicons\.org\/([a-z0-9-]+)/gi
+          let match = regex.exec(content)
+          while (match) {
+            slugMatches.push(match[1])
+            match = regex.exec(content)
+          }
+          const unique = Array.from(new Set(slugMatches))
+          addSectionInt('skills', { ...base, items: unique })
+          return
+        }
+
+        if (titleLower === 'socials' || titleLower === 'social links') {
+          addTextTitle(title)
+          const base = baseContent('socials')
+          const links = []
+          const iconRegex = /<a[^>]*href="([^"]+)"[^>]*>[\s\S]*?(?:cdn\.simpleicons\.org\/|skillicons\.dev\/icons\?i=)([a-z0-9-]+)[^"]*"[^>]*>[\s\S]*?<\/a>/gi
+          let match = iconRegex.exec(content)
+          while (match) {
+            links.push({ label: match[2].trim(), slug: match[2].trim(), url: match[1].trim() })
+            match = iconRegex.exec(content)
+          }
+          if (!links.length) {
+            const regex = /-\s*\[([^\]]+)\]\(([^)]+)\)/g
+            let listMatch = regex.exec(content)
+            while (listMatch) {
+              links.push({ label: listMatch[1].trim(), url: listMatch[2].trim() })
+              listMatch = regex.exec(content)
+            }
+          }
+          addSectionInt('socials', { ...base, links })
+          return
+        }
+
+        addAboutSection(title || 'About', content)
+        return
+      }
+
+      addAboutSection(title || 'About', content)
+    })
+
+    return sectionsOut
+  }
+
   const handleDragStart = (e) => setActiveId(e.active.id)
   const handleDragEnd = (e) => {
     if (e.over && e.active.id !== e.over.id) moveSection(e.active.id, e.over.id)
@@ -1012,13 +570,21 @@ const ReadmeBuilder = ({ activePanel }) => {
   }
   const handleDragCancel = () => setActiveId(null)
 
+  const handleRawChange = (event) => {
+    const next = event.target.value
+    setRawMarkdown(next)
+    setIsRawDirty(next !== markdown)
+    setSections(parseRawToSections(next))
+  }
+
   const handleCopyMarkdown = async () => {
     if (!navigator.clipboard?.writeText) {
       toast.error('Clipboard not available.')
       return
     }
     try {
-      await navigator.clipboard.writeText(markdown)
+      const output = isRawDirty ? rawMarkdown : markdown
+      await navigator.clipboard.writeText(output)
       toast.success('Markdown copied to clipboard!')
     } catch {
       toast.error('Copy failed. Try again.')
@@ -1027,7 +593,9 @@ const ReadmeBuilder = ({ activePanel }) => {
 
   const handleResetDefaults = () => {
     resetToDefaults()
-    toast.success('Defaults restored.')
+    setIsRawDirty(false)
+    setIsRawMode(false)
+    toast.success('Defaults template restored.')
   }
 
   const handleQuickStart = () => {
@@ -1035,39 +603,46 @@ const ReadmeBuilder = ({ activePanel }) => {
     toast.success('Template loaded!')
   }
 
+  const handleSaveTemplate = () => {
+    navigate('/templates?create=1')
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-      <Navbar onReset={handleResetDefaults} onCopy={handleCopyMarkdown} />
+    <div className="flex flex-1 flex-col">
+      <Navbar
+        onReset={handleResetDefaults}
+        onCopy={handleCopyMarkdown}
+        onOpenProjectModal={onOpenProjectModal}
+        onSaveTemplate={handleSaveTemplate}
+      />
 
       <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '400px 1fr',
-          gap: '0px',
-          flex: 1,
-          minHeight: 0,
-        }}
+        className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[400px_1fr]"
       >
         {/* ── Builder Column ─────────────────── */}
         <div
-          style={{
-            borderRight: '1px solid var(--border-default)',
-            overflowY: 'auto',
-            height: 'calc(100vh - 49px)',
-            position: 'sticky',
-            top: '49px',
-          }}
+          className={`relative border-b border-zinc-800 ${isEditorOpen ? 'block' : 'hidden'} lg:block lg:sticky lg:top-12.25 lg:h-[calc(100vh-49px)] lg:overflow-y-auto lg:border-b-0 lg:border-r [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-[3px] [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-track]:bg-transparent hover:[&::-webkit-scrollbar-thumb]:bg-zinc-700`}
         >
-          <div style={{ padding: '20px' }}>
+          <div className="p-4 sm:p-5">
+            <div className="mb-4 flex items-center justify-between lg:hidden">
+              <span className={labelClass}>Template Editor</span>
+              <button
+                type="button"
+                onClick={() => setIsEditorOpen(false)}
+                className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 transition-all duration-150 hover:border-zinc-700 hover:text-zinc-300 cursor-pointer select-none"
+              >
+                Back to Preview
+              </button>
+            </div>
             {/* Add Section Panel */}
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ marginBottom: '12px' }}>
-                <p style={labelStyle}>Add Section</p>
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+            <div className="mb-5">
+              <div className="mb-3">
+                <p className={labelClass}>Add Section</p>
+                <p className="mt-0.5 text-xs text-zinc-500">
                   Choose a template to insert.
                 </p>
               </div>
-              <div style={{ display: 'grid', gap: '6px' }}>
+              <div className="grid gap-1.5">
                 {SECTION_LIBRARY.map((item) => (
                   <button
                     key={item.type}
@@ -1076,48 +651,18 @@ const ReadmeBuilder = ({ activePanel }) => {
                       addSection(item.type)
                       toast.success(`${item.label} section added.`)
                     }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '10px 12px',
-                      textAlign: 'left',
-                      borderRadius: 'var(--radius-md)',
-                      border: '1px solid var(--border-default)',
-                      background: 'var(--bg-surface)',
-                      cursor: 'pointer',
-                      transition: 'all 150ms ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--border-muted)'
-                      e.currentTarget.style.background = 'var(--bg-elevated)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--border-default)'
-                      e.currentTarget.style.background = 'var(--bg-surface)'
-                    }}
+                    className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2.5 text-left transition-all duration-150 hover:border-zinc-700 hover:bg-[#1e1e22] cursor-pointer"
                   >
                     <div>
-                      <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                      <p className="text-[13px] font-medium text-zinc-50">
                         {item.label}
                       </p>
-                      <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '1px' }}>
+                      <p className="mt-px text-[11px] text-zinc-600">
                         {item.description}
                       </p>
                     </div>
                     <span
-                      style={{
-                        width: '28px',
-                        height: '28px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderRadius: '50%',
-                        border: '1px solid var(--border-default)',
-                        background: 'var(--bg-base)',
-                        color: 'var(--text-muted)',
-                        flexShrink: 0,
-                      }}
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-zinc-800 bg-zinc-950 text-zinc-500"
                     >
                       <Plus size={14} />
                     </span>
@@ -1128,18 +673,14 @@ const ReadmeBuilder = ({ activePanel }) => {
 
             {/* Divider */}
             <div
-              style={{
-                height: '1px',
-                background: 'var(--border-default)',
-                marginBottom: '20px',
-              }}
+              className="mb-5 h-px bg-zinc-800"
             />
 
             {/* Active Sections */}
             <div>
-              <div style={{ marginBottom: '12px' }}>
-                <p style={labelStyle}>Active Sections</p>
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+              <div className="mb-3">
+                <p className={labelClass}>Active Sections</p>
+                <p className="mt-0.5 text-xs text-zinc-500">
                   Drag to reorder · Expand to edit.
                 </p>
               </div>
@@ -1147,7 +688,7 @@ const ReadmeBuilder = ({ activePanel }) => {
               {sections.length === 0 ? (
                 <EmptyState onQuickStart={handleQuickStart} />
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div className="flex flex-col gap-2">
                   <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
@@ -1159,40 +700,46 @@ const ReadmeBuilder = ({ activePanel }) => {
                       items={sections.map((s) => s.id)}
                       strategy={verticalListSortingStrategy}
                     >
-                      <AnimatePresence>
+                      <AnimatePresence mode="popLayout">
                         {sections.map((section) => (
-                          <SortableSectionCard key={section.id} section={section}>
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+                          <SortableSectionCard
+                            key={section.id}
+                            id={section.id}
+                            title={SECTION_LABELS[section.type]}
+                            description={SECTION_DESCRIPTIONS[section.type]}
+                            pillLabel={section.type}
+                            pillClass={getSectionPillClass(section.type)}
+                          >
+                            <div className="mb-3 flex justify-end">
                               <button
                                 type="button"
                                 onClick={() => removeSection(section.id)}
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  padding: '4px 10px',
-                                  fontSize: '11px',
-                                  fontWeight: 600,
-                                  fontFamily: 'var(--font-sans)',
-                                  color: 'var(--danger)',
-                                  background: 'var(--danger-muted)',
-                                  border: '1px solid rgba(239,68,68,0.2)',
-                                  borderRadius: 'var(--radius-sm)',
-                                  cursor: 'pointer',
-                                  transition: 'all 150ms ease',
-                                }}
+                                className="flex items-center gap-1 rounded-md border border-[rgba(239,68,68,0.2)] bg-[rgba(239,68,68,0.12)] px-2.5 py-1 text-[11px] font-semibold text-red-500 transition-all duration-150 cursor-pointer select-none"
                               >
                                 <Trash2 size={12} />
                                 Remove
                               </button>
                             </div>
-                            <SectionEditor section={section} />
+                            <SectionEditor
+                              section={section}
+                              updateSection={updateSection}
+                              techOptions={TECH_OPTIONS}
+                              socialOptions={SOCIAL_OPTIONS}
+                              fallbackIcon={FALLBACK_ICON}
+                              buildStatsUrl={buildStatsUrl}
+                            />
                           </SortableSectionCard>
                         ))}
                       </AnimatePresence>
                     </SortableContext>
                     <DragOverlay dropAnimation={null}>
-                      {activeSection ? <DragPreview section={activeSection} /> : null}
+                      {activeSection ? (
+                        <DragPreview
+                          title={SECTION_LABELS[activeSection.type]}
+                          pillLabel={activeSection.type}
+                          pillClass={getSectionPillClass(activeSection.type)}
+                        />
+                      ) : null}
                     </DragOverlay>
                   </DndContext>
                 </div>
@@ -1203,52 +750,88 @@ const ReadmeBuilder = ({ activePanel }) => {
 
         {/* ── Preview Column ─────────────────── */}
         <div
-          style={{
-            overflowY: 'auto',
-            height: 'calc(100vh - 49px)',
-            position: 'sticky',
-            top: '49px',
-            background: 'var(--bg-base)',
-          }}
+          className={`relative bg-zinc-950 ${isEditorOpen ? 'hidden' : 'block'} lg:block lg:sticky lg:top-12.25 lg:h-[calc(100vh-49px)] lg:overflow-y-auto [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-[3px] [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-track]:bg-transparent hover:[&::-webkit-scrollbar-thumb]:bg-zinc-700`}
         >
-          <div style={{ padding: '20px' }}>
-            {/* Preview Header */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '16px',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span className="live-dot" />
-                <span style={{ ...labelStyle }}>Preview</span>
-                <span style={{ fontSize: '11px', color: 'var(--text-faint)' }}>· Live</span>
-              </div>
-              <GithubModeToggle />
+          <div className="p-4 sm:p-5">
+          {/* Preview Header */}
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            
+            {/* Left Side: Status Indicator */}
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 shrink-0 rounded-full bg-green-500 animate-pulse" />
+              <span className={labelClass}>Preview</span>
+              <span className="text-[11px] text-zinc-600">· Live</span>
             </div>
 
-            {/* Preview Pane */}
-            <Preview markdown={markdown} previewTheme={previewTheme} />
+            {/* Right Side: Action Controls */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Mode Switcher */}
+              <div className="flex items-center gap-1 rounded-full border border-zinc-800 bg-zinc-950 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setIsRawMode(false)}
+                  className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all sm:text-[11px] select-none ${
+                    !isRawMode ? 'bg-zinc-800 text-zinc-50' : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  Preview
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsRawMode(true)}
+                  className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all sm:text-[11px] select-none ${
+                    isRawMode ? 'bg-zinc-800 text-zinc-50' : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  Raw
+                </button>
+              </div>
+
+              {/* Mobile Edit Button - Uses Icon on small screens, Text on slightly larger */}
+              <button
+                type="button"
+                onClick={() => setIsEditorOpen(true)}
+                className="flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500 transition-all hover:border-zinc-700 hover:text-zinc-300 lg:hidden"
+              >
+                <Sparkles size={14} className="text-blue-500" />
+                <span className="hidden xs:inline">Edit Template</span>
+              </button>
+
+              <GithubModeToggle
+                previewTheme={previewTheme}
+                onChange={setPreviewTheme}
+              />
+            </div>
+          </div>
+
+          {/* Preview Pane */}
+          {isRawMode ? (
+              <textarea
+                value={rawMarkdown}
+                onChange={handleRawChange}
+                spellCheck={false}
+                className={`${inputClass} h-[60vh] lg:h-screen resize-y font-mono text-[12px] sm:text-[13px]`}
+              />
+            ) : (
+              <Preview
+                markdown={isRawDirty ? rawMarkdown : markdown}
+                previewTheme={previewTheme}
+              />
+            )}
           </div>
         </div>
       </div>
 
-      <Toaster
-        theme="dark"
-        position="bottom-right"
-        toastOptions={{
-          style: {
-            background: 'var(--bg-surface)',
-            color: 'var(--text-primary)',
-            border: '1px solid var(--border-default)',
-            fontFamily: 'var(--font-sans)',
-            fontSize: '13px',
-            borderRadius: 'var(--radius-md)',
-          },
-        }}
-      />
+      {/* Floating Feedback Button */}
+      <button
+        onClick={() => setIsFeedbackOpen(true)}
+        className="fixed bottom-16 sm:bottom-6 right-3 sm:right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full border border-zinc-800 bg-zinc-950 text-emerald-500 shadow-2xl transition-all hover:scale-110 hover:border-emerald-500/50 hover:bg-emerald-500/10 cursor-pointer tooltip tooltip-left before:text-[11px] before:font-medium"
+        data-tip="Give Feedback"
+      >
+        <MessageSquare size={20} />
+      </button>
+
+      <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
     </div>
   )
 }

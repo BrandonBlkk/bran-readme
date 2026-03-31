@@ -1,44 +1,15 @@
-import profileImage from '../assets/images/Profile.png';
+import React from 'react'
 
-export default function Footer() {
-  return (
-    <footer
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8px',
-        padding: '20px 0',
-        borderTop: '1px solid var(--border-default)',
-        fontSize: '11px',
-        fontWeight: 500,
-        letterSpacing: '0.08em',
-        textTransform: 'uppercase',
-        color: 'var(--text-muted)',
-        marginTop: 'auto',
-      }}
-    >
-      Made by
-      <a
-        href="https://github.com/BrandonBlkk"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          color: 'var(--text-primary)',
-          textDecoration: 'none',
-          transition: 'color 200ms ease',
-        }}
-        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--accent)' }}
-        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-primary)' }}
-      >
-        <img
-          src={profileImage}
-          alt="Profile"
-          style={{ width: '20px', height: '20px', borderRadius: '50%' }}
-        />
-        Brandon
-      </a>
-    </footer>
-  )
+const Footer = ({label}) => {
+    const currentYear = 2026
+
+    return (
+        <footer className="py-6 text-center">
+            <p className="text-[9px] uppercase tracking-widest text-zinc-600 sm:text-[10px] mb-12 lg:mb-0">
+            © {currentYear} BranReadme - {label}
+            </p>
+        </footer>
+    )
 }
+
+export default Footer
