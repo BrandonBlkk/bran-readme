@@ -1,6 +1,6 @@
 import React from 'react'
 import Sidebar from '../components/Sidebar'
-import { Info, Layout, Zap, Shield, Github, ExternalLink } from 'lucide-react'
+import { Info, Layout, Zap, Shield, Github, ExternalLink, Star } from 'lucide-react'
 import Footer from '../components/Footer';
 
 const About = () => {
@@ -34,7 +34,7 @@ const About = () => {
                   href="https://github.com/BrandonBlkk/bran-readme"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-blue-500 bg-blue-500 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-blue-600 sm:flex-none"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-white text-xs font-medium text-[#0a0a0a] transition-opacity hover:opacity-90 py-2 px-4 sm:flex-none"
                 >
                   <Github size={14} />
                   <span>GitHub</span>
@@ -44,9 +44,9 @@ const About = () => {
                   href="https://github.com/BrandonBlkk/bran-readme/stargazers"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-2 text-xs font-semibold text-zinc-200 transition-all hover:border-zinc-700 hover:bg-[#1e1e22] sm:flex-none"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950 py-2 px-4 text-xs font-medium text-zinc-200 transition-all hover:border-zinc-700 hover:bg-[#1e1e22] sm:flex-none"
                 >
-                  <Zap size={14} className="text-blue-400" />
+                  <Star size={14} className="text-blue-400" />
                   <span>Star Project</span>
                 </a>
               </div>

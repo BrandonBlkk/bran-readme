@@ -68,12 +68,12 @@ const LandingPage = () => {
                 <div className="flex items-center gap-2">
                     <Link
                         to="/landing"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg cursor-pointer"
+                        className="flex h-8 w-8 items-center justify-center cursor-pointer"
                     >
                         <img
-                        src="/logo.svg"
+                        src="/logo.png"
                         alt="Profile"
-                        className="h-5 w-5 rounded-full select-none"
+                        className="h-5 w-5 select-none"
                         />
                     </Link>
                     <span className="text-lg font-semibold tracking-tight text-white">
@@ -145,8 +145,8 @@ const LandingPage = () => {
                 </p>
 
                 <h1 className="mt-5 text-4xl font-bold leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-[3.5rem]">
-                Ship a GitHub profile that actually
-                <span className="text-[#737373]"> looks&nbsp;good.</span>
+                <span className='text-blue-400'>Ship</span> a GitHub profile that actually
+                <span className="text-rose-400"> looks&nbsp;good.</span>
                 </h1>
 
                 <p className="mt-6 max-w-lg text-base leading-relaxed text-[#a3a3a3] sm:text-lg">
@@ -163,7 +163,7 @@ const LandingPage = () => {
                 </Link>
                 <a
                     href="#features"
-                    className="inline-flex items-center justify-center rounded-lg border border-[#262626] px-6 py-3 text-sm font-medium text-[#e5e5e5] transition-colors hover:border-[#404040] hover:text-white"
+                    className="inline-flex items-center justify-center rounded-lg border border-[#262626] px-6 py-3 text-sm font-medium text-[#e5e5e5] transition-colors hover:border-[#404040] hover:text-white select-none"
                 >
                     See Features
                 </a>
@@ -186,7 +186,7 @@ const LandingPage = () => {
 
             {/* Hero Card - generator preview */}
             <motion.div variants={fadeUp}>
-                <div className="rounded-3xl border border-[#1c1c1c] bg-[#101010] p-3 shadow-[0_24px_70px_rgba(0,0,0,0.55)]">
+                <div className="rounded-3xl border border-[#1c1c1c] bg-[#101010] p-3 shadow-[0_24px_70px_rgba(0,0,0,0.55)] select-none">
                     <div className="flex items-center gap-1.5 pb-5">
                         <span className="h-2.5 w-2.5 rounded-full bg-red-500/50 border border-red-500/10" />
                         <span className="h-2.5 w-2.5 rounded-full bg-amber-500/50 border border-amber-500/10" />
@@ -245,7 +245,7 @@ const LandingPage = () => {
                 Features
                 </p>
                 <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-                Everything you need to ship fast.
+                <span className='text-blue-400'>Everything</span> you need to <span className='text-rose-400'>ship fast.</span>
                 </h2>
                 <p className="mt-4 max-w-lg text-base text-[#737373]">
                 No code, no fuss. Drag sections, pick a theme, and export clean markdown in minutes.
@@ -319,7 +319,7 @@ const LandingPage = () => {
                 How It Works
                 </p>
                 <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-                Three steps. That's it.
+               <span className='text-rose-400'>Three steps.</span> That's it.
                 </h2>
             </motion.div>
 
@@ -374,12 +374,12 @@ const LandingPage = () => {
                     Templates
                 </p>
                 <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-                    Start with a base. Make it yours.
+                    <span className='text-blue-400'>Start</span> with a base. <span className='text-rose-400'>Make it yours.</span>
                 </h2>
                 </div>
                 <Link
                 to="/templates"
-                className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-[#262626] px-5 py-2.5 text-sm font-medium text-[#e5e5e5] transition-colors hover:border-[#404040] hover:text-white"
+                className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-[#262626] px-5 py-2.5 text-sm font-medium text-[#e5e5e5] transition-colors hover:border-[#404040] hover:text-white select-none"
                 >
                 View All
                 <ArrowRight size={14} />
@@ -433,7 +433,7 @@ const LandingPage = () => {
                 variants={fadeUp}
                 className="mt-6 text-3xl font-bold tracking-tight text-white sm:text-4xl"
             >
-                Ready to build your profile?
+                <span className='text-blue-400'>Ready</span> to build <span className='text-rose-400'>your profile?</span>
             </motion.h2>
             <motion.p
                 variants={fadeUp}
@@ -478,3 +478,4 @@ const LandingPage = () => {
 }
 
 export default LandingPage
+
