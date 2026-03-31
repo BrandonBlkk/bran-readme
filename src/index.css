@@ -31,4 +31,12 @@
     scrollbar-width: thin;
     scrollbar-color: #3f3f46 #09090b;
   }
+
+  /* Hide DaisyUI tooltips on mobile */
+  @media (max-width: 1023px) {
+    .tooltip::before,
+    .tooltip::after {
+      display: none !important;
+    }
+  }
 }
