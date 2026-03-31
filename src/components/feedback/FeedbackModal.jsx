@@ -88,7 +88,7 @@ const FeedbackModal = ({ isOpen, onClose }) => {
                         rating >= star ? 'text-amber-400 fill-amber-400' : 'text-zinc-700'
                       }`}
                     >
-                      <Star size={32} />
+                      <Star size={24} />
                     </button>
                   ))}
                 </div>
