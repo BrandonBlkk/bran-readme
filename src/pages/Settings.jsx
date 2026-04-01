@@ -14,6 +14,7 @@ import {
 import { toast } from 'sonner'
 import Footer from '../components/Footer'
 import Toggle from '../components/Toggle'
+import { useProfileStore } from '../stores/profileStore'
 
 const labelClass = 'text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500'
 const inputClass =
@@ -28,14 +29,6 @@ const defaultPreferences = {
   cloudSync: false,
 }
 
-const defaultProfile = {
-  displayName: 'Brandon Developer',
-  githubUser: 'BrandonBlkk',
-  role: 'Backend Web Developer',
-  location: 'Yangon, Myanmar',
-  template: 'starter',
-}
-
 const defaultExport = {
   fileName: 'README.md',
   lineWidth: 80,
@@ -47,24 +40,23 @@ const defaultExport = {
 const Settings = () => {
   const currentYear = 2026
   const [preferences, setPreferences] = useState(defaultPreferences)
-  const [profile, setProfile] = useState(defaultProfile)
   const [exportDefaults, setExportDefaults] = useState(defaultExport)
   const [theme, setTheme] = useState('dark')
+  const profile = useProfileStore((state) => state.profile)
+  const updateProfile = useProfileStore((state) => state.updateProfile)
+  const resetProfile = useProfileStore((state) => state.resetProfile)
 
   const profileHint = useMemo(
     () => `${profile.displayName} · ${profile.githubUser}`,
     [profile.displayName, profile.githubUser],
   )
 
-  const updateProfile = (field, value) =>
-    setProfile((prev) => ({ ...prev, [field]: value }))
-
   const updateExport = (field, value) =>
     setExportDefaults((prev) => ({ ...prev, [field]: value }))
 
   const resetAll = () => {
     setPreferences(defaultPreferences)
-    setProfile(defaultProfile)
+    resetProfile()
     setExportDefaults(defaultExport)
     setTheme('dark')
     toast.success('Defaults settings restored.')

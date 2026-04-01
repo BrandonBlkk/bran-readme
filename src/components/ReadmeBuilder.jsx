@@ -25,6 +25,7 @@ import EmptyState from './readme-builder/EmptyState'
 import GithubModeToggle from './readme-builder/GithubModeToggle'
 import { PENDING_TEMPLATE_KEY } from '../constants/templateFlow'
 import { normalizeTemplatePayload } from '../utils/templatePayload'
+import { DEFAULT_PROFILE, getDefaultGithubUsername, useProfileStore } from '../stores/profileStore'
 import {
   generateMarkdown,
   TECH_OPTIONS,
@@ -44,7 +45,7 @@ const createId = () => {
 const clone = (value) => JSON.parse(JSON.stringify(value))
 
 /* ── Template Content ──────────────────────────────── */
-const TEMPLATE_CONTENT = {
+const BASE_TEMPLATE_CONTENT = {
   header: {
     name: 'Brandon Developer',
     tagline: 'Designing developer experiences that ship.',
@@ -55,7 +56,6 @@ const TEMPLATE_CONTENT = {
     text: 'I build clean, fast developer tooling with a focus on UX and performance.',
   },
   stats: {
-    username: 'BrandonBlkk',
     theme: 'transparent',
     showMainStats: true,
     showLanguageStats: true,
@@ -92,6 +92,14 @@ const TEMPLATE_CONTENT = {
   },
 }
 
+const getTemplateContent = () => ({
+  ...clone(BASE_TEMPLATE_CONTENT),
+  stats: {
+    ...clone(BASE_TEMPLATE_CONTENT.stats),
+    username: getDefaultGithubUsername(),
+  },
+})
+
 const SECTION_LIBRARY = [
   { type: 'header', label: 'Header', description: 'Name, tagline, and key links.' },
   { type: 'about', label: 'About', description: 'Short bio or mission statement.' },
@@ -104,7 +112,7 @@ const SECTION_LIBRARY = [
 const createSection = (type) => ({
   id: createId(),
   type,
-  content: clone(TEMPLATE_CONTENT[type] ?? {}),
+  content: clone(getTemplateContent()[type] ?? {}),
 })
 
 const createTextTitleSection = (title) => ({
@@ -174,13 +182,53 @@ const useSectionStore = create(
         if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return
         set({ sections: moveItem(sections, fromIndex, toIndex) })
       },
-      resetToDefaults: () => set({ sections: getDefaultSections(), previewTheme: 'dark' }),
+      syncStatsUsername: (username) =>
+        set((state) => {
+          const nextUsername = String(username ?? '').trim()
+          if (!nextUsername) return state
+
+          let hasChanges = false
+          const sections = state.sections.map((section) => {
+            if (section.type !== 'stats') return section
+
+            const currentUsername = String(section.content?.username ?? '').trim()
+            const shouldReplace =
+              !currentUsername
+              || currentUsername === DEFAULT_PROFILE.githubUser
+              || currentUsername === state.syncedGithubUsername
+
+            if (!shouldReplace || currentUsername === nextUsername) return section
+
+            hasChanges = true
+            return {
+              ...section,
+              content: {
+                ...section.content,
+                username: nextUsername,
+              },
+            }
+          })
+
+          if (!hasChanges && state.syncedGithubUsername === nextUsername) return state
+
+          return {
+            sections,
+            syncedGithubUsername: nextUsername,
+          }
+        }),
+      resetToDefaults: () =>
+        set({
+          sections: getDefaultSections(),
+          previewTheme: 'dark',
+          syncedGithubUsername: getDefaultGithubUsername(),
+        }),
     }),
     {
       name: 'readme-builder-store',
       partialize: (state) => ({
         sections: state.sections,
         previewTheme: state.previewTheme,
+        syncedGithubUsername: state.syncedGithubUsername,
       }),
     },
   ),
@@ -228,6 +276,8 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
   const setSections = useSectionStore((s) => s.setSections)
   const updateSection = useSectionStore((s) => s.updateSection)
   const resetToDefaults = useSectionStore((s) => s.resetToDefaults)
+  const syncStatsUsername = useSectionStore((s) => s.syncStatsUsername)
+  const defaultGithubUsername = useProfileStore((state) => state.profile.githubUser)
 
   const markdown = useMemo(() => generateMarkdown(sections), [sections])
   const [isRawMode, setIsRawMode] = useState(false)
@@ -278,6 +328,12 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
     }
   }, [setPreviewTheme, setSections])
 
+  useEffect(() => {
+    const username = String(defaultGithubUsername ?? '').trim()
+    if (!username) return
+    syncStatsUsername(username)
+  }, [defaultGithubUsername, syncStatsUsername])
+
   const parseRawToSections = (raw) => {
     // This part is a bit complex but we reuse the logic from the original file
     // For brevity in this replacement, I'll keep the core structure
@@ -288,8 +344,10 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
       }
     })
 
+    const templateContent = getTemplateContent()
+
     const baseContent = (type) => {
-      const base = existingByType.get(type)?.content ?? TEMPLATE_CONTENT[type] ?? {}
+      const base = existingByType.get(type)?.content ?? templateContent[type] ?? {}
       return clone(base)
     }
 

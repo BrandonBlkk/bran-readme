@@ -5,8 +5,11 @@ import Settings from './pages/Settings'
 import Templates from './pages/Templates'
 import NotFound from './pages/NotFound'
 import LandingPage from './pages/LandingPage'
+import useGithubProfileSync from './hooks/useGithubProfileSync'
 
 const App = () => {
+  useGithubProfileSync()
+
   return (
     <Routes>
       <Route path="/landing" element={<LandingPage />} />
