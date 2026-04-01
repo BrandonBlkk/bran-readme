@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+﻿import React, { useEffect, useMemo, useState } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import {
@@ -46,16 +46,16 @@ const clone = (value) => JSON.parse(JSON.stringify(value))
 /* ── Template Content ──────────────────────────────── */
 const TEMPLATE_CONTENT = {
   header: {
-    name: 'Jane Developer',
+    name: 'Brandon Developer',
     tagline: 'Designing developer experiences that ship.',
-    location: 'San Francisco, CA',
-    website: 'https://janedeveloper.dev',
+    location: 'Yangon, Myanmar',
+    website: 'https://brandondevme.vercel.app',
   },
   about: {
     text: 'I build clean, fast developer tooling with a focus on UX and performance.',
   },
   stats: {
-    username: 'octocat',
+    username: 'BrandonBlkk',
     theme: 'transparent',
     showMainStats: true,
     showLanguageStats: true,
