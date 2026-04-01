@@ -1,65 +1,29 @@
-﻿import React, { useMemo, useState } from 'react'
-import Sidebar from '../components/Sidebar'
-import ResetButton from '../components/ResetButton'
-import {
-  Settings as SettingsIcon,
-  User,
-  Sliders,
-  Shield,
-  Cloud,
-  Download,
-  Moon,
-  Sun,
-} from 'lucide-react'
+﻿import React, { useMemo } from 'react'
+import { User } from 'lucide-react'
 import { toast } from 'sonner'
 import Footer from '../components/Footer'
-import Toggle from '../components/Toggle'
+import ResetButton from '../components/ResetButton'
+import Sidebar from '../components/Sidebar'
 import { useProfileStore } from '../stores/profileStore'
 
 const labelClass = 'text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500'
 const inputClass =
-  'w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-[13px] font-mono text-zinc-50 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15'
-
-const defaultPreferences = {
-  autosave: true,
-  compactSidebar: false,
-  reduceMotion: false,
-  emailUpdates: true,
-  localOnly: true,
-  cloudSync: false,
-}
-
-const defaultExport = {
-  fileName: 'README.md',
-  lineWidth: 80,
-  includeToc: true,
-  includeBadges: true,
-  includeFooter: false,
-}
+  'w-full rounded-lg border border-zinc-800 bg-zinc-950 mt-2 px-3 py-2 text-[13px] font-mono text-zinc-50 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15'
 
 const Settings = () => {
   const currentYear = 2026
-  const [preferences, setPreferences] = useState(defaultPreferences)
-  const [exportDefaults, setExportDefaults] = useState(defaultExport)
-  const [theme, setTheme] = useState('dark')
   const profile = useProfileStore((state) => state.profile)
   const updateProfile = useProfileStore((state) => state.updateProfile)
   const resetProfile = useProfileStore((state) => state.resetProfile)
 
   const profileHint = useMemo(
-    () => `${profile.displayName} · ${profile.githubUser}`,
+    () => `${profile.displayName} - ${profile.githubUser}`,
     [profile.displayName, profile.githubUser],
   )
 
-  const updateExport = (field, value) =>
-    setExportDefaults((prev) => ({ ...prev, [field]: value }))
-
   const resetAll = () => {
-    setPreferences(defaultPreferences)
     resetProfile()
-    setExportDefaults(defaultExport)
-    setTheme('dark')
-    toast.success('Defaults settings restored.')
+    toast.success('Profile settings restored.')
   }
 
   return (
@@ -84,7 +48,8 @@ const Settings = () => {
                     Personalize BranReadme
                   </h1>
                   <p className="mt-3 max-w-2xl text-xs leading-relaxed text-zinc-400 sm:text-sm">
-                    Tune how the builder behaves, choose your defaults, and decide what gets saved. All changes are local to this device unless you enable sync.
+                    Update the profile details the README builder actually uses across your
+                    workspace.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -100,7 +65,7 @@ const Settings = () => {
             <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 lg:p-7">
               <h2 className="mb-5 flex items-center gap-3 text-sm font-semibold sm:text-base">
                 <User size={18} className="text-blue-400" />
-                Profile & Workspace
+                Profile
               </h2>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
@@ -110,7 +75,9 @@ const Settings = () => {
                     value={profile.displayName}
                     onChange={(e) => updateProfile('displayName', e.target.value)}
                   />
-                  <p className="mt-2 text-[11px] text-zinc-600">Shown in header templates and exports.</p>
+                  <p className="mt-2 text-[11px] text-zinc-600">
+                    Shown in header templates and exports.
+                  </p>
                 </div>
                 <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
                   <p className={labelClass}>GitHub Username</p>
@@ -119,30 +86,33 @@ const Settings = () => {
                     value={profile.githubUser}
                     onChange={(e) => updateProfile('githubUser', e.target.value)}
                   />
-                  <p className="mt-2 text-[11px] text-zinc-600">Used for stats cards and links.</p>
+                  <p className="mt-2 text-[11px] text-zinc-600">
+                    Used for stats cards and GitHub links.
+                  </p>
                 </div>
-                <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-                  <p className={labelClass}>Role</p>
+                <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 md:col-span-2">
+                  <p className={labelClass}>Website</p>
                   <input
                     className={inputClass}
-                    value={profile.role}
-                    onChange={(e) => updateProfile('role', e.target.value)}
+                    value={profile.website ?? ''}
+                    onChange={(e) => updateProfile('website', e.target.value)}
+                    placeholder="https://brandondevme.vercel.app"
                   />
-                  <p className="mt-2 text-[11px] text-zinc-600">Appears in starter templates.</p>
+                  <p className="mt-2 text-[11px] text-zinc-600">
+                    Used as the default website link in header templates.
+                  </p>
                 </div>
-                <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-                  <p className={labelClass}>Default Template</p>
-                  <select
+                <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 md:col-span-2">
+                  <p className={labelClass}>Location</p>
+                  <input
                     className={inputClass}
-                    value={profile.template}
-                    onChange={(e) => updateProfile('template', e.target.value)}
-                  >
-                    <option value="starter">Starter</option>
-                    <option value="minimal">Minimal</option>
-                    <option value="bold">Bold</option>
-                    <option value="showcase">Showcase</option>
-                  </select>
-                  <p className="mt-2 text-[11px] text-zinc-600">Applied when you create a new README.</p>
+                    value={profile.location ?? ''}
+                    onChange={(e) => updateProfile('location', e.target.value)}
+                    placeholder="Yangon, Myanmar"
+                  />
+                  <p className="mt-2 text-[11px] text-zinc-600">
+                    Used as the default location in header templates.
+                  </p>
                 </div>
               </div>
               <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3">
@@ -152,162 +122,7 @@ const Settings = () => {
               </div>
             </section>
 
-            <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 lg:p-7">
-              <h2 className="mb-5 flex items-center gap-3 text-sm font-semibold sm:text-base">
-                <Sliders size={18} className="text-blue-400" />
-                Editor Preferences
-              </h2>
-              <div className="grid grid-cols-1 gap-2">
-                <Toggle
-                  title="Auto-save changes"
-                  description="Keep templates saved locally every few seconds."
-                  checked={preferences.autosave}
-                  onChange={(value) => setPreferences((prev) => ({ ...prev, autosave: value }))}
-                />
-              </div>
-              <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-                <p className={`${labelClass} mb-2`}>Default Preview Theme</p>
-                <div className="flex items-center gap-2 select-none">
-                  <button
-                    type="button"
-                    onClick={() => setTheme('dark')}
-                    className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-all cursor-pointer ${
-                      theme === 'dark'
-                        ? 'border-zinc-700 bg-zinc-900 text-zinc-50'
-                        : 'border-transparent text-zinc-500 hover:text-zinc-300'
-                    }`}
-                  >
-                    <Moon size={14} className="text-blue-400" />
-                    Dark
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTheme('light')}
-                    className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-all cursor-pointer ${
-                      theme === 'light'
-                        ? 'border-zinc-700 bg-zinc-900 text-zinc-50'
-                        : 'border-transparent text-zinc-500 hover:text-zinc-300'
-                    }`}
-                  >
-                    <Sun size={14} className="text-amber-300" />
-                    Light
-                  </button>
-                </div>
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 lg:p-7">
-              <h2 className="mb-5 flex items-center gap-3 text-sm font-semibold sm:text-base">
-                <SettingsIcon size={18} className="text-blue-400" />
-                Export Defaults
-              </h2>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-                  <p className={labelClass}>File Name</p>
-                  <input
-                    className={inputClass}
-                    value={exportDefaults.fileName}
-                    onChange={(e) => updateExport('fileName', e.target.value)}
-                  />
-                  <p className="mt-2 text-[11px] text-zinc-600">Default file name when exporting markdown.</p>
-                </div>
-                <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-                  <p className={labelClass}>Line Width</p>
-                  <input
-                    type="number"
-                    min="40"
-                    max="120"
-                    className={inputClass}
-                    value={exportDefaults.lineWidth}
-                    onChange={(e) => updateExport('lineWidth', Number(e.target.value))}
-                  />
-                  <p className="mt-2 text-[11px] text-zinc-600">Used when wrapping long paragraphs.</p>
-                </div>
-              </div>
-              <div className="mt-3 grid grid-cols-1 gap-2">
-                <Toggle
-                  title="Include badge row"
-                  description="Prepends commonly used badges to the header."
-                  checked={exportDefaults.includeBadges}
-                  onChange={(value) => updateExport('includeBadges', value)}
-                />
-                <Toggle
-                  title="Add footer signature"
-                  description="Adds a small footer signature to each export."
-                  checked={exportDefaults.includeFooter}
-                  onChange={(value) => updateExport('includeFooter', value)}
-                />
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 lg:p-7">
-              <h2 className="mb-5 flex items-center gap-3 text-sm font-semibold sm:text-base">
-                <Shield size={18} className="text-blue-400" />
-                Data & Privacy
-              </h2>
-              <div className="grid grid-cols-1 gap-2">
-                <Toggle
-                  title="Store templates locally"
-                  description="Saves README layouts in your browser for instant reloads."
-                  checked={preferences.localOnly}
-                  onChange={(value) => setPreferences((prev) => ({ ...prev, localOnly: value }))}
-                />
-                <Toggle
-                  title="Cloud sync"
-                  description="Back up templates to the cloud so they follow you everywhere."
-                  checked={preferences.cloudSync}
-                  onChange={(value) => setPreferences((prev) => ({ ...prev, cloudSync: value }))}
-                />
-                <Toggle
-                  title="Email product updates"
-                  description="Receive release notes and new template drops."
-                  checked={preferences.emailUpdates}
-                  onChange={(value) => setPreferences((prev) => ({ ...prev, emailUpdates: value }))}
-                />
-              </div>
-              <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-                <div className="flex items-center gap-2 text-xs text-zinc-400">
-                  <Cloud size={14} className="text-blue-400" />
-                  Sync status: <span className="font-semibold text-zinc-200">Local only</span>
-                </div>
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 lg:p-7">
-              <h2 className="mb-5 flex items-center gap-3 text-sm font-semibold sm:text-base">
-                <Download size={18} className="text-blue-400" />
-                Backup & Restore
-              </h2>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-                  <p className="text-sm font-semibold text-zinc-50">Download backup</p>
-                  <p className="mt-2 text-xs text-zinc-500">
-                    Export a JSON snapshot of your templates and settings.
-                  </p>
-                  <button
-                    type="button"
-                    className="mt-4 inline-flex items-center gap-2 rounded-lg bg-white text-xs font-medium text-[#0a0a0a] transition-opacity hover:opacity-90 px-3 py-2 cursor-pointer"
-                  >
-                    <Download size={14} />
-                    Export JSON
-                  </button>
-                </div>
-                <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-                  <p className="text-sm font-semibold text-zinc-50">Restore templates</p>
-                  <p className="mt-2 text-xs text-zinc-500">
-                    Import a previously exported JSON file to restore your workspace.
-                  </p>
-                  <button
-                    type="button"
-                    className="mt-4 inline-flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs font-semibold text-zinc-200 transition-all hover:border-zinc-700 hover:bg-[#1e1e22] select-none cursor-pointer"
-                  >
-                    Upload backup
-                  </button>
-                </div>
-              </div>
-            </section>
-
-            <Footer label="settings overview" />  
+            <Footer label="profile settings" />
           </div>
         </div>
       </div>
