@@ -73,6 +73,11 @@ const toSocialSlug = (value) => {
 }
 
 const sanitizeHex = (value) => String(value ?? '').replace('#', '').trim()
+const clampNumber = (value, min, max, fallback) => {
+  const numeric = Number(value)
+  if (Number.isNaN(numeric)) return fallback
+  return Math.min(max, Math.max(min, numeric))
+}
 
 export const buildStatsUrl = (content) => {
   const url = new URL('https://github-readme-stats-delta-eight-12.vercel.app/api')
@@ -125,6 +130,16 @@ const buildTrophyStatsUrl = (content) => {
   return url.toString()
 }
 
+const getStatsCardDimensions = (content) => {
+  const widthScale = clampNumber(content.cardWidth, 300, 600, 420) / 420
+  const heightScale = clampNumber(content.lineHeight, 18, 40, 28) / 28
+
+  return {
+    width: Math.round(390 * widthScale),
+    height: Math.round(195 * heightScale),
+  }
+}
+
 const headerBlock = (c) => {
   const lines = []
   if (c.name) lines.push(`# ${c.name}`)
@@ -149,17 +164,18 @@ const statsBlock = (c) => {
 
   if (!mainCard && !languageCard && !trophyCard) return 'Enable at least one GitHub card.'
 
-  const cardWidth = 390
-  const cardHeight = 195
+  const { width: cardWidth, height: cardHeight } = getStatsCardDimensions(c)
   const trophyWidth = 650
   const renderTopCard = (card) =>
     `<img src="${card.src}" alt="${card.alt}" width="${cardWidth}" height="${cardHeight}" />`
   const renderTrophyCard = (card) =>
     `<img src="${card.src}" alt="${card.alt}" width="${trophyWidth}" />`
   const topRowCards = [mainCard, languageCard].filter(Boolean)
-  const topRow = topRowCards.length
-    ? `<div align="center">\n${topRowCards.map(renderTopCard).join('\n&nbsp;&nbsp;\n')}\n</div>`
-    : ''
+  const topRow = topRowCards.length === 2
+    ? `<div align="center">\n${topRowCards.map(renderTopCard).join('\n')}\n</div>`
+    : topRowCards.length === 1
+      ? `<div align="center">\n${renderTopCard(topRowCards[0])}\n</div>`
+      : ''
   const bottomRow = trophyCard
     ? `<div align="center">\n${renderTrophyCard(trophyCard)}\n</div>`
     : ''

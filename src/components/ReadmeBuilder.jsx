@@ -177,7 +177,7 @@ const BASE_TEMPLATE_CONTENT = {
     includeAllCommits: false,
     countPrivate: false,
     rankIcon: 'github',
-    bgColor: '#0d1117',
+    bgColor: '#171f2b',
     titleColor: '#58a6ff',
     textColor: '#c9d1d9',
     iconColor: '#58a6ff',

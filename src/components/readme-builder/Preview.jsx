@@ -3,6 +3,32 @@ import ReactMarkdown from 'react-markdown'
 import rehypeRaw from 'rehype-raw'
 import remarkGfm from 'remark-gfm'
 
+const isPreviewAsset = (src = '') =>
+  typeof src === 'string'
+  && (
+    src.includes('cdn.simpleicons.org')
+    || src.includes('skillicons.dev')
+    || src.includes('github-readme-stats-delta-eight-12.vercel.app')
+    || src.includes('github-profile-trophy.screw-hand.vercel.app')
+    || src.includes('github-profile-trophy-alpha-ecru.vercel.app')
+    || src.includes('github-profile-trophy.vercel.app')
+  )
+
+const isVisualOnlyNode = (node) => {
+  if (typeof node === 'string') return node.trim() === ''
+  if (!React.isValidElement(node)) return false
+  if (node.type === 'br' || node.props?.node?.tagName === 'br') return true
+  if (isPreviewAsset(node.props?.src)) return true
+
+  const children = React.Children.toArray(node.props?.children)
+  return children.length > 0 && children.every(isVisualOnlyNode)
+}
+
+const hasOnlyVisualChildren = (children) => {
+  const nodes = React.Children.toArray(children)
+  return nodes.length > 0 && nodes.every(isVisualOnlyNode)
+}
+
 const Preview = ({ markdown, previewTheme }) => {
   const isDark = previewTheme === 'dark'
   const theme = {
@@ -48,26 +74,28 @@ const Preview = ({ markdown, previewTheme }) => {
     h6: (props) => (
       <h6 className="mb-3 mt-5 text-[14px] font-semibold uppercase tracking-[0.04em]" {...props} />
     ),
-    p: (props) => {
-      const children = React.Children.toArray(props.children)
-      const isOnlyImages = children.length > 0 && children.every((child) => {
-        if (typeof child === 'string') return child.trim() === ''
-        if (!React.isValidElement(child)) return false
-        const src = child.props?.src
-        return (
-          typeof src === 'string'
-          && (
-            src.includes('cdn.simpleicons.org')
-            || src.includes('skillicons.dev')
-            || src.includes('github-readme-stats-delta-eight-12.vercel.app')
-            || src.includes('github-profile-trophy.screw-hand.vercel.app')
-            || src.includes('github-profile-trophy-alpha-ecru.vercel.app')
-            || src.includes('github-profile-trophy.vercel.app')
-          )
-        )
-      })
+    div: ({ className = '', children, ...props }) => {
+      const isOnlyVisual = hasOnlyVisualChildren(children)
       return (
-        <p className={`mb-4 leading-normal ${isOnlyImages ? 'select-none' : ''}`} {...props} />
+        <div
+          className={[className, isOnlyVisual ? 'select-none' : ''].filter(Boolean).join(' ')}
+          {...props}
+        >
+          {children}
+        </div>
+      )
+    },
+    p: ({ className = '', children, ...props }) => {
+      const isOnlyVisual = hasOnlyVisualChildren(children)
+      return (
+        <p
+          className={[className, 'mb-4 leading-normal', isOnlyVisual ? 'select-none' : '']
+            .filter(Boolean)
+            .join(' ')}
+          {...props}
+        >
+          {children}
+        </p>
       )
     },
     ul: (props) => (
@@ -76,9 +104,19 @@ const Preview = ({ markdown, previewTheme }) => {
     ol: (props) => (
       <ol className="m-0 p-0" {...props} />
     ),
-    a: (props) => (
-      <a className={`${theme.link} hover:underline`} {...props} />
-    ),
+    a: ({ className = '', children, ...props }) => {
+      const isOnlyVisual = hasOnlyVisualChildren(children)
+      return (
+        <a
+          className={[className, theme.link, 'hover:underline', isOnlyVisual ? 'select-none' : '']
+            .filter(Boolean)
+            .join(' ')}
+          {...props}
+        >
+          {children}
+        </a>
+      )
+    },
     li: (props) => (
       <li className="mb-1 ml-6 list-disc" {...props} />
     ),
@@ -95,7 +133,7 @@ const Preview = ({ markdown, previewTheme }) => {
     blockquote: (props) => (
       <blockquote className={`my-0 border-l-4 px-4 ${theme.blockquote}`} {...props} />
     ),
-    img: ({ src = '', alt = '', ...props }) => {
+    img: ({ src = '', alt = '', width, height, ...props }) => {
       const isTechIcon = typeof src === 'string'
         && (src.includes('cdn.simpleicons.org') || src.includes('skillicons.dev'))
       const isGitStats = typeof src === 'string'
@@ -106,12 +144,36 @@ const Preview = ({ markdown, previewTheme }) => {
           || src.includes('github-profile-trophy.vercel.app')
         )
       const selectNone = (isTechIcon || isGitStats) ? 'select-none' : ''
+      const numericWidth = Number(width)
+      const numericHeight = Number(height)
+      const statsStyle = isGitStats
+        && Number.isFinite(numericWidth)
+        && numericWidth > 0
+        && Number.isFinite(numericHeight)
+        && numericHeight > 0
+        ? {
+            width: `${numericWidth}px`,
+            height: `${numericHeight}px`,
+            maxWidth: '100%',
+            objectFit: 'fill',
+          }
+        : undefined
       const className = isTechIcon
         ? 'inline-block align-middle h-auto w-[clamp(24px,5vw,40px)] max-w-none'
         : isGitStats
-          ? 'inline-block align-middle h-auto max-w-full'
+          ? 'inline-block align-middle max-w-full'
           : 'max-w-full h-auto'
-      return <img src={src} alt={alt} className={`${className} ${selectNone}`} {...props} />
+      return (
+        <img
+          src={src}
+          alt={alt}
+          width={width}
+          height={height}
+          className={`${className} ${selectNone}`}
+          style={statsStyle}
+          {...props}
+        />
+      )
     },
   }
 
