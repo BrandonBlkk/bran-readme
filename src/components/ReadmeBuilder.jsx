@@ -645,8 +645,10 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
           metaText.split('|').map((p) => p.trim()).forEach((p) => {
             const lMatch = p.match(/^Location:\s*(.+)$/i)
             if (lMatch) location = lMatch[1].trim()
-            const wMatch = p.match(/\[Website\]\(([^)]+)\)/i)
-            if (wMatch) website = wMatch[1].trim()
+            const wMatch = p.match(
+              /<a\s+href="([^"]+)"[^>]*>\s*<img[^>]*>\s*<\/a>|\[\!\[[^\]]*\]\([^)]+\)\]\(([^)]+)\)|\[Website\]\(([^)]+)\)/i
+            )
+            if (wMatch) website = (wMatch[1] ?? wMatch[2] ?? wMatch[3] ?? '').trim()
           })
         }
         addSectionInt('header', {

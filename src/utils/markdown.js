@@ -140,13 +140,24 @@ const getStatsCardDimensions = (content) => {
   }
 }
 
+const buildWebsiteBadge = (website) => {
+  const badgeUrl = new URL('https://img.shields.io/static/v1')
+  badgeUrl.searchParams.set('label', '')
+  badgeUrl.searchParams.set('message', 'Portfolio')
+  badgeUrl.searchParams.set('color', '#FF2056')
+  badgeUrl.searchParams.set('style', 'flat-square')
+  badgeUrl.searchParams.set('logo', 'googlechrome')
+  badgeUrl.searchParams.set('logoColor', 'white')
+  return `<a href="${website}"><img src="${badgeUrl.toString()}" alt="Portfolio" height="24" /></a>`
+}
+
 const headerBlock = (c) => {
   const lines = []
   if (c.name) lines.push(`# ${c.name}`)
   if (c.tagline) lines.push(c.tagline)
   const meta = []
   if (c.location) meta.push(`Location: ${c.location}`)
-  if (c.website) meta.push(`[Website](${c.website})`)
+  if (c.website) meta.push(buildWebsiteBadge(c.website))
   if (meta.length) lines.push(meta.join(' | '))
   return lines.join('\n\n')
 }

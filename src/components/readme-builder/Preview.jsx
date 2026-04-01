@@ -136,6 +136,7 @@ const Preview = ({ markdown, previewTheme }) => {
     img: ({ src = '', alt = '', width, height, ...props }) => {
       const isTechIcon = typeof src === 'string'
         && (src.includes('cdn.simpleicons.org') || src.includes('skillicons.dev'))
+      const isBadge = typeof src === 'string' && src.includes('img.shields.io')
       const isGitStats = typeof src === 'string'
         && (
           src.includes('github-readme-stats-delta-eight-12.vercel.app')
@@ -158,8 +159,19 @@ const Preview = ({ markdown, previewTheme }) => {
             objectFit: 'fill',
           }
         : undefined
+      const badgeStyle = isBadge
+        && Number.isFinite(numericHeight)
+        && numericHeight > 0
+        ? {
+            height: `${numericHeight}px`,
+            width: 'auto',
+            maxWidth: '100%',
+          }
+        : undefined
       const className = isTechIcon
         ? 'inline-block align-middle h-auto w-[clamp(24px,5vw,40px)] max-w-none'
+        : isBadge
+          ? 'inline-block align-middle max-w-full'
         : isGitStats
           ? 'inline-block align-middle max-w-full'
           : 'max-w-full h-auto'
@@ -170,7 +182,7 @@ const Preview = ({ markdown, previewTheme }) => {
           width={width}
           height={height}
           className={`${className} ${selectNone}`}
-          style={statsStyle}
+          style={statsStyle ?? badgeStyle}
           {...props}
         />
       )
