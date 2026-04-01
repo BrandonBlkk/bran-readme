@@ -25,6 +25,7 @@ import EmptyState from './readme-builder/EmptyState'
 import GithubModeToggle from './readme-builder/GithubModeToggle'
 import { PENDING_TEMPLATE_KEY } from '../constants/templateFlow'
 import { normalizeTemplatePayload } from '../utils/templatePayload'
+import { DEFAULT_PROFILE, getResolvedProfile, useProfileStore } from '../stores/profileStore'
 import {
   generateMarkdown,
   TECH_OPTIONS,
@@ -43,8 +44,120 @@ const createId = () => {
 
 const clone = (value) => JSON.parse(JSON.stringify(value))
 
+const normalizeTextValue = (value) => String(value ?? '').trim()
+
+const getActiveProfileDefaults = () => {
+  const profile = getResolvedProfile()
+  return {
+    displayName: normalizeTextValue(profile.displayName) || DEFAULT_PROFILE.displayName,
+    githubUser: normalizeTextValue(profile.githubUser) || DEFAULT_PROFILE.githubUser,
+    website: normalizeTextValue(profile.website) || DEFAULT_PROFILE.website,
+    location: normalizeTextValue(profile.location) || DEFAULT_PROFILE.location,
+  }
+}
+
+const shouldReplaceWithProfileDefault = (currentValue, fallbackValue, previousSyncedValue, force) => {
+  const current = normalizeTextValue(currentValue)
+  if (force) return true
+  if (!current) return true
+  if (current === normalizeTextValue(fallbackValue)) return true
+  if (previousSyncedValue && current === normalizeTextValue(previousSyncedValue)) return true
+  return false
+}
+
+const applyProfileDefaultsToSections = (
+  sections,
+  profileDefaults,
+  {
+    force = false,
+    previousDisplayName = '',
+    previousGithubUser = '',
+    previousWebsite = '',
+    previousLocation = '',
+  } = {},
+) => {
+  let hasChanges = false
+
+  const nextSections = sections.map((section) => {
+    if (section.type === 'header') {
+      const nextName = normalizeTextValue(profileDefaults.displayName) || DEFAULT_PROFILE.displayName
+      const nextWebsite = normalizeTextValue(profileDefaults.website) || DEFAULT_PROFILE.website
+      const nextLocation = normalizeTextValue(profileDefaults.location) || DEFAULT_PROFILE.location
+      const currentName = normalizeTextValue(section.content?.name)
+      const currentWebsite = normalizeTextValue(section.content?.website)
+      const currentLocation = normalizeTextValue(section.content?.location)
+      const shouldReplace = shouldReplaceWithProfileDefault(
+        currentName,
+        DEFAULT_PROFILE.displayName,
+        previousDisplayName,
+        force,
+      )
+      const shouldReplaceWebsite = shouldReplaceWithProfileDefault(
+        currentWebsite,
+        DEFAULT_PROFILE.website,
+        previousWebsite,
+        force,
+      )
+      const shouldReplaceLocation = shouldReplaceWithProfileDefault(
+        currentLocation,
+        DEFAULT_PROFILE.location,
+        previousLocation,
+        force,
+      )
+
+      if (
+        (!shouldReplace || currentName === nextName)
+        && (!shouldReplaceWebsite || currentWebsite === nextWebsite)
+        && (!shouldReplaceLocation || currentLocation === nextLocation)
+      ) {
+        return section
+      }
+
+      hasChanges = true
+      return {
+        ...section,
+        content: {
+          ...section.content,
+          ...(shouldReplace && currentName !== nextName ? { name: nextName } : {}),
+          ...(shouldReplaceWebsite && currentWebsite !== nextWebsite ? { website: nextWebsite } : {}),
+          ...(shouldReplaceLocation && currentLocation !== nextLocation ? { location: nextLocation } : {}),
+        },
+      }
+    }
+
+    if (section.type === 'stats') {
+      const nextUsername = normalizeTextValue(profileDefaults.githubUser) || DEFAULT_PROFILE.githubUser
+      const currentUsername = normalizeTextValue(section.content?.username)
+      const shouldReplace = shouldReplaceWithProfileDefault(
+        currentUsername,
+        DEFAULT_PROFILE.githubUser,
+        previousGithubUser,
+        force,
+      )
+
+      if (!shouldReplace || currentUsername === nextUsername) return section
+
+      hasChanges = true
+      return {
+        ...section,
+        content: {
+          ...section.content,
+          username: nextUsername,
+        },
+      }
+    }
+
+    return section
+  })
+
+  return {
+    sections: nextSections,
+    hasChanges,
+  }
+}
+
 /* ── Template Content ──────────────────────────────── */
-const TEMPLATE_CONTENT = {
+const BASE_TEMPLATE_CONTENT = {
   header: {
     name: 'Brandon Developer',
     tagline: 'Designing developer experiences that ship.',
@@ -55,7 +168,6 @@ const TEMPLATE_CONTENT = {
     text: 'I build clean, fast developer tooling with a focus on UX and performance.',
   },
   stats: {
-    username: 'BrandonBlkk',
     theme: 'transparent',
     showMainStats: true,
     showLanguageStats: true,
@@ -92,6 +204,23 @@ const TEMPLATE_CONTENT = {
   },
 }
 
+const getTemplateContent = () => {
+  const { displayName, githubUser, website, location } = getActiveProfileDefaults()
+  return {
+    ...clone(BASE_TEMPLATE_CONTENT),
+    header: {
+      ...clone(BASE_TEMPLATE_CONTENT.header),
+      name: displayName,
+      website,
+      location,
+    },
+    stats: {
+      ...clone(BASE_TEMPLATE_CONTENT.stats),
+      username: githubUser,
+    },
+  }
+}
+
 const SECTION_LIBRARY = [
   { type: 'header', label: 'Header', description: 'Name, tagline, and key links.' },
   { type: 'about', label: 'About', description: 'Short bio or mission statement.' },
@@ -104,7 +233,7 @@ const SECTION_LIBRARY = [
 const createSection = (type) => ({
   id: createId(),
   type,
-  content: clone(TEMPLATE_CONTENT[type] ?? {}),
+  content: clone(getTemplateContent()[type] ?? {}),
 })
 
 const createTextTitleSection = (title) => ({
@@ -143,6 +272,10 @@ const useSectionStore = create(
     (set, get) => ({
       sections: getDefaultSections(),
       previewTheme: 'dark',
+      syncedDisplayName: getActiveProfileDefaults().displayName,
+      syncedGithubUsername: getActiveProfileDefaults().githubUser,
+      syncedWebsite: getActiveProfileDefaults().website,
+      syncedLocation: getActiveProfileDefaults().location,
       setPreviewTheme: (theme) => set({ previewTheme: theme }),
       addSection: (type) =>
         set((state) => ({
@@ -174,13 +307,66 @@ const useSectionStore = create(
         if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return
         set({ sections: moveItem(sections, fromIndex, toIndex) })
       },
-      resetToDefaults: () => set({ sections: getDefaultSections(), previewTheme: 'dark' }),
+      syncProfileDefaults: ({ displayName, githubUser, website, location }, options = {}) =>
+        set((state) => {
+          const nextProfileDefaults = {
+            displayName: normalizeTextValue(displayName) || DEFAULT_PROFILE.displayName,
+            githubUser: normalizeTextValue(githubUser) || DEFAULT_PROFILE.githubUser,
+            website: normalizeTextValue(website) || DEFAULT_PROFILE.website,
+            location: normalizeTextValue(location) || DEFAULT_PROFILE.location,
+          }
+
+          const { sections, hasChanges } = applyProfileDefaultsToSections(
+            state.sections,
+            nextProfileDefaults,
+            {
+              force: Boolean(options.force),
+              previousDisplayName: state.syncedDisplayName,
+              previousGithubUser: state.syncedGithubUsername,
+              previousWebsite: state.syncedWebsite,
+              previousLocation: state.syncedLocation,
+            },
+          )
+
+          if (
+            !hasChanges
+            && state.syncedDisplayName === nextProfileDefaults.displayName
+            && state.syncedGithubUsername === nextProfileDefaults.githubUser
+            && state.syncedWebsite === nextProfileDefaults.website
+            && state.syncedLocation === nextProfileDefaults.location
+          ) {
+            return state
+          }
+
+          return {
+            sections,
+            syncedDisplayName: nextProfileDefaults.displayName,
+            syncedGithubUsername: nextProfileDefaults.githubUser,
+            syncedWebsite: nextProfileDefaults.website,
+            syncedLocation: nextProfileDefaults.location,
+          }
+        }),
+      resetToDefaults: () => {
+        const nextProfileDefaults = getActiveProfileDefaults()
+        set({
+          sections: getDefaultSections(),
+          previewTheme: 'dark',
+          syncedDisplayName: nextProfileDefaults.displayName,
+          syncedGithubUsername: nextProfileDefaults.githubUser,
+          syncedWebsite: nextProfileDefaults.website,
+          syncedLocation: nextProfileDefaults.location,
+        })
+      },
     }),
     {
       name: 'readme-builder-store',
       partialize: (state) => ({
         sections: state.sections,
         previewTheme: state.previewTheme,
+        syncedDisplayName: state.syncedDisplayName,
+        syncedGithubUsername: state.syncedGithubUsername,
+        syncedWebsite: state.syncedWebsite,
+        syncedLocation: state.syncedLocation,
       }),
     },
   ),
@@ -228,6 +414,19 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
   const setSections = useSectionStore((s) => s.setSections)
   const updateSection = useSectionStore((s) => s.updateSection)
   const resetToDefaults = useSectionStore((s) => s.resetToDefaults)
+  const syncProfileDefaults = useSectionStore((s) => s.syncProfileDefaults)
+  const profileDisplayName = useProfileStore(
+    (state) => normalizeTextValue(state.profile.displayName) || DEFAULT_PROFILE.displayName,
+  )
+  const profileGithubUsername = useProfileStore(
+    (state) => normalizeTextValue(state.profile.githubUser) || DEFAULT_PROFILE.githubUser,
+  )
+  const profileWebsite = useProfileStore(
+    (state) => normalizeTextValue(state.profile.website) || DEFAULT_PROFILE.website,
+  )
+  const profileLocation = useProfileStore(
+    (state) => normalizeTextValue(state.profile.location) || DEFAULT_PROFILE.location,
+  )
 
   const markdown = useMemo(() => generateMarkdown(sections), [sections])
   const [isRawMode, setIsRawMode] = useState(false)
@@ -271,16 +470,46 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
       const payload = normalizeTemplatePayload(JSON.parse(raw))
       if (!payload.sections.length) return
       setSections(payload.sections)
+      syncProfileDefaults(
+        {
+          displayName: profileDisplayName,
+          githubUser: profileGithubUsername,
+          website: profileWebsite,
+          location: profileLocation,
+        },
+        { force: true },
+      )
       setPreviewTheme(payload.previewTheme)
       toast.success('Template loaded from gallery.')
     } catch {
       // ignore invalid session payload
     }
-  }, [setPreviewTheme, setSections])
+  }, [
+    profileDisplayName,
+    profileGithubUsername,
+    profileWebsite,
+    profileLocation,
+    setPreviewTheme,
+    setSections,
+    syncProfileDefaults,
+  ])
+
+  useEffect(() => {
+    syncProfileDefaults({
+      displayName: profileDisplayName,
+      githubUser: profileGithubUsername,
+      website: profileWebsite,
+      location: profileLocation,
+    })
+  }, [
+    profileDisplayName,
+    profileGithubUsername,
+    profileWebsite,
+    profileLocation,
+    syncProfileDefaults,
+  ])
 
   const parseRawToSections = (raw) => {
-    // This part is a bit complex but we reuse the logic from the original file
-    // For brevity in this replacement, I'll keep the core structure
     const existingByType = new Map()
     sections.forEach((section) => {
       if (!existingByType.has(section.type)) {
@@ -288,8 +517,10 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
       }
     })
 
+    const templateContent = getTemplateContent()
+
     const baseContent = (type) => {
-      const base = existingByType.get(type)?.content ?? TEMPLATE_CONTENT[type] ?? {}
+      const base = existingByType.get(type)?.content ?? templateContent[type] ?? {}
       return clone(base)
     }
 
