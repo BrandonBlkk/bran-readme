@@ -17,16 +17,16 @@ const TEMPLATE_COLUMNS = `
 
 const BASE_CONTENT = {
   header: {
-    name: 'Jane Developer',
+    name: 'Brandon Developer',
     tagline: 'Designing developer experiences that ship.',
-    location: 'San Francisco, CA',
-    website: 'https://janedeveloper.dev',
+    location: 'Yangon, Myanmar',
+    website: 'https://brandondevme.vercel.app',
   },
   about: {
     text: 'I build clean, fast developer tooling with a focus on UX and performance.',
   },
   stats: {
-    username: 'octocat',
+    username: 'BrandonBlkk',
     theme: 'transparent',
     showMainStats: true,
     showLanguageStats: true,
