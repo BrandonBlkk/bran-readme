@@ -2,6 +2,8 @@
 
 BranReadme is a React + Vite app for building GitHub profile README files with drag-and-drop sections, live preview, and template sharing.
 
+<img width="1911" height="905" alt="image" src="https://github.com/user-attachments/assets/43da42df-3dc5-48a6-985b-9bc021f51e49" />
+
 ## Local Development
 
 1. Install dependencies:
