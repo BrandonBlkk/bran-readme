@@ -13,7 +13,7 @@ const HeaderEditor = ({ section, updateSection }) => {
           className={inputClass}
           value={c.name ?? ''}
           onChange={(e) => updateSection(section.id, { name: e.target.value })}
-          placeholder="Jane Developer"
+          placeholder="Brandon Developer"
         />
       </Field>
       <Field label="Tagline">
@@ -29,7 +29,7 @@ const HeaderEditor = ({ section, updateSection }) => {
           className={inputClass}
           value={c.location ?? ''}
           onChange={(e) => updateSection(section.id, { location: e.target.value })}
-          placeholder="San Francisco, CA"
+          placeholder="Yangon, Myanmar"
         />
       </Field>
       <Field label="Website">
@@ -37,7 +37,7 @@ const HeaderEditor = ({ section, updateSection }) => {
           className={inputClass}
           value={c.website ?? ''}
           onChange={(e) => updateSection(section.id, { website: e.target.value })}
-          placeholder="https://janedeveloper.dev"
+          placeholder="https://brandondevme.vercel.app"
         />
       </Field>
     </div>
@@ -70,7 +70,7 @@ const StatsEditor = ({ section, updateSection, buildStatsUrl }) => {
           className={inputClass}
           value={c.username ?? ''}
           onChange={(e) => updateSection(section.id, { username: e.target.value })}
-          placeholder="octocat"
+          placeholder="BrandonBlkk"
         />
       </Field>
       <Field label="Theme">

@@ -1,4 +1,4 @@
-import Preview from './readme-builder/Preview'
+import Preview from '../readme-builder/Preview'
 
 const FALLBACK_MARKDOWN = `
 # README Preview

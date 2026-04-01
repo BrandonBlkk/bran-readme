@@ -29,10 +29,10 @@ const defaultPreferences = {
 }
 
 const defaultProfile = {
-  displayName: 'Jane Developer',
-  githubUser: 'octocat',
-  role: 'Frontend Engineer',
-  location: 'San Francisco, CA',
+  displayName: 'Brandon Developer',
+  githubUser: 'BrandonBlkk',
+  role: 'Backend Web Developer',
+  location: 'Yangon, Myanmar',
   template: 'starter',
 }
 

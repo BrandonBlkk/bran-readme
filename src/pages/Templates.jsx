@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { LayoutGrid, Sparkles, Plus, Heart, X, Eye } from 'lucide-react'
+import { LayoutGrid, Sparkles, Plus, X } from 'lucide-react'
 import { toast } from 'sonner'
 import Sidebar from '../components/Sidebar'
-import TemplateMockup from '../components/TemplateMockup'
 import Footer from '../components/Footer'
 import Preview from '../components/readme-builder/Preview'
 import { hasSupabaseConfig } from '../lib/supabaseClient'
@@ -19,10 +18,10 @@ import { getCurrentUser } from '../services/authService'
 import { PENDING_TEMPLATE_KEY } from '../constants/templateFlow'
 import { generateMarkdown } from '../utils/markdown'
 import { getPersistedBuilderSnapshot, sanitizeTags } from '../utils/templatePayload'
+import TemplateSkeleton from '../components/template/TemplateSkeleton'
+import TemplateCard from '../components/template/TemplateCard'
 
 const FAVORITES_KEY = 'branreadme:templateFavorites'
-
-const pillBase = 'inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]'
 
 const safeParse = (value) => {
   try {
@@ -511,81 +510,29 @@ const Templates = () => {
                   </div>
                 </div>
 
-               {isLoading && (
-                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/10 backdrop-blur-md">
-                    <div className="flex flex-col items-center gap-2">
-                      <p className='w-10 h-10 animate-spin rounded-full border-t-2 border-zinc-50'></p>
-                    </div>
-                  </div>
-                )}
-
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {templates.map((template) => {
-                    const isFavorite = favorites.has(template.id)
-                    const isHighlighted = highlightedTemplateId === template.id
-                    const previewMarkdown =
-                      template.markdown
-                      || generateMarkdown(template.payload?.sections || [])
-                    return (
-                      <article
-                        key={template.id}
-                        className={`group relative flex flex-col rounded-2xl border bg-zinc-950 p-5 transition-all ${
-                          isHighlighted
-                            ? 'border-blue-500/70 shadow-[0_0_0_1px_rgba(59,130,246,0.4)]'
-                            : 'border-zinc-800 hover:border-zinc-700'
-                        }`}
-                      >
-                        <TemplateMockup
-                          markdown={previewMarkdown}
-                          onClick={() => setPreviewTemplate({ ...template, previewMarkdown })}
+                  {isLoading ? (
+                    Array.from({ length: 6 }).map((_, i) => <TemplateSkeleton key={i} />)
+                  ) : (
+                    templates.map((template) => {
+                      const isFavorite = favorites.has(template.id);
+                      const isHighlighted = highlightedTemplateId === template.id;
+                      const previewMarkdown =
+                        template.markdown || generateMarkdown(template.payload?.sections || []);
+                      
+                      return (
+                        <TemplateCard
+                          key={template.id}
+                          template={template}
+                          isFavorite={isFavorite}
+                          isHighlighted={isHighlighted}
+                          previewMarkdown={previewMarkdown}
+                          onUseTemplate={handleUseTemplate}
+                          onToggleFavorite={toggleFavorite}
                         />
-
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1">
-                            <h3 className="text-sm font-bold text-zinc-50">{template.name}</h3>
-                            <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-500 line-clamp-2">{template.description || 'No description'}</p>
-                            <p className="mt-2 text-[10px] uppercase tracking-[0.16em] text-zinc-600">{template.authorName} | {template.meta}</p>
-                          </div>
-                          <button
-                            onClick={() => toggleFavorite(template.id)}
-                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-all cursor-pointer ${
-                              isFavorite
-                                ? 'border-rose-500/40 bg-rose-400/10 text-rose-500'
-                                : 'border-zinc-800 text-zinc-600 hover:text-zinc-300'
-                            }`}
-                          >
-                            <Heart size={14} fill={isFavorite ? 'currentColor' : 'none'} />
-                          </button>
-                        </div>
-
-                        <div className="mt-4 flex flex-wrap gap-2 select-none">
-                          {template.tags.map((tag) => (
-                            <span key={tag} className={`${pillBase} border-zinc-800 bg-zinc-900 text-zinc-500`}>{tag}</span>
-                          ))}
-                          {!template.tags?.length && (
-                            <span className={`${pillBase} border-zinc-800 bg-zinc-900 text-zinc-600`}>No tags</span>
-                          )}
-                        </div>
-
-                        <div className="mt-6 grid grid-cols-2 gap-2">
-                          <button
-                            onClick={() => setPreviewTemplate({ ...template, previewMarkdown })}
-                            className="flex items-center justify-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 py-2.5 text-xs font-bold text-zinc-400 transition-all hover:bg-zinc-800 hover:text-zinc-200 active:scale-95 select-none cursor-pointer"
-                          >
-                            <Eye size={14} />
-                            Preview
-                          </button>
-                          <button
-                            onClick={() => handleUseTemplate(template)}
-                            className="flex items-center justify-center gap-2 rounded-xl bg-zinc-50 py-2.5 text-xs font-bold text-zinc-950 transition-all hover:bg-zinc-200 active:scale-95 select-none cursor-pointer"
-                          >
-                            <Sparkles size={14} />
-                            Use Template
-                          </button>
-                        </div>
-                      </article>
-                    )
-                  })}
+                      );
+                    })
+                  )}
                 </div>
               </section>
 
