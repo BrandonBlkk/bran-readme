@@ -108,12 +108,10 @@ const StatsEditor = ({ section, updateSection, buildStatsUrl }) => {
         <ColorField label="Title Color" value={c.titleColor ?? '#58a6ff'} onChange={(v) => updateSection(section.id, { titleColor: v })} />
         <ColorField label="Text Color" value={c.textColor ?? '#c9d1d9'} onChange={(v) => updateSection(section.id, { textColor: v })} />
         <ColorField label="Icon Color" value={c.iconColor ?? '#58a6ff'} onChange={(v) => updateSection(section.id, { iconColor: v })} />
-        <ColorField label="BG Color" value={c.bgColor ?? '#0d1117'} onChange={(v) => updateSection(section.id, { bgColor: v })} />
+        <ColorField label="BG Color" value={c.bgColor ?? '#171f2b'} onChange={(v) => updateSection(section.id, { bgColor: v })} />
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid gap-4">
         <RangeField label="Border Radius" min={0} max={24} value={c.borderRadius ?? 8} onChange={(v) => updateSection(section.id, { borderRadius: v })} />
-        <RangeField label="Card Width" min={300} max={600} value={c.cardWidth ?? 420} onChange={(v) => updateSection(section.id, { cardWidth: v })} />
-        <RangeField label="Line Height" min={18} max={40} value={c.lineHeight ?? 28} onChange={(v) => updateSection(section.id, { lineHeight: v })} />
       </div>
       <Field label="Preview URL" hint="Generated from the controls above.">
         <input className={`${inputClass} text-zinc-500`} value={statsUrl} readOnly />
