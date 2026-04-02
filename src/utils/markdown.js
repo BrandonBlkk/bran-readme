@@ -148,8 +148,41 @@ const buildWebsiteBadge = (website) => {
   badgeUrl.searchParams.set('style', 'flat-square')
   badgeUrl.searchParams.set('logo', 'googlechrome')
   badgeUrl.searchParams.set('logoColor', 'white')
-  return `<a href="${website}"><img src="${badgeUrl.toString()}" class="select-none inline-block" alt="Portfolio" height="24" /></a>`
+  return `<a href="${website}"><img src="${badgeUrl.toString()}" alt="Portfolio" align="absmiddle" /></a>`
 }
+
+const indentBlock = (block, baseDepth = 1) => {
+  let depth = 0
+  return String(block ?? '')
+    .split('\n')
+    .map((line) => {
+      const trimmed = line.trim()
+      if (!trimmed) return ''
+
+      if (trimmed.startsWith('</')) {
+        depth = Math.max(0, depth - 1)
+      }
+
+      const indented = `${'\t'.repeat(baseDepth + depth)}${trimmed}`
+
+      const isOpeningTag = /^<([a-z][^/\s>]*)\b[^>]*>$/i.test(trimmed)
+      const isSelfClosing = /\/>$/.test(trimmed)
+      if (isOpeningTag && !isSelfClosing) {
+        depth += 1
+      }
+
+      return indented
+    })
+    .join('\n')
+}
+
+const buildAlignedBlock = (align, content) => [
+  `<div align="${align}">`,
+  indentBlock(content),
+  '</div>',
+]
+  .filter((line) => String(line ?? '').trim().length > 0)
+  .join('\n')
 
 const headerBlock = (c) => {
   const lines = []
@@ -158,7 +191,11 @@ const headerBlock = (c) => {
   const meta = []
   if (c.location) meta.push(`Location: ${c.location}`)
   if (c.website) meta.push(buildWebsiteBadge(c.website))
-  if (meta.length) lines.push(meta.join(' | '))
+
+  if (meta.length) {
+    lines.push(buildAlignedBlock('left', meta.join(' | ')))
+  }
+
   return lines.join('\n\n')
 }
 
@@ -183,47 +220,18 @@ const statsBlock = (c) => {
     `<img src="${card.src}" alt="${card.alt}" width="${trophyWidth}" />`
   const topRowCards = [mainCard, languageCard].filter(Boolean)
   const topRow = topRowCards.length === 2
-    ? `<div align="center">\n${topRowCards.map(renderTopCard).join('\n')}\n</div>`
+    ? buildAlignedBlock('center', topRowCards.map(renderTopCard).join('\n'))
     : topRowCards.length === 1
-      ? `<div align="center">\n${renderTopCard(topRowCards[0])}\n</div>`
+      ? buildAlignedBlock('center', renderTopCard(topRowCards[0]))
       : ''
   const bottomRow = trophyCard
-    ? `<div align="center">\n${renderTrophyCard(trophyCard)}\n</div>`
+    ? buildAlignedBlock('center', renderTrophyCard(trophyCard))
     : ''
-  const indentBlock = (block, baseDepth = 1) => {
-    let depth = 0
-    return String(block ?? '')
-      .split('\n')
-      .map((line) => {
-        const trimmed = line.trim()
-        if (!trimmed) return ''
 
-        if (trimmed.startsWith('</')) {
-          depth = Math.max(0, depth - 1)
-        }
-
-        const indented = `${'\t'.repeat(baseDepth + depth)}${trimmed}`
-
-        const isOpeningTag = /^<([a-z][^/\s>]*)\b[^>]*>$/i.test(trimmed)
-        const isSelfClosing = /\/>$/.test(trimmed)
-        if (isOpeningTag && !isSelfClosing) {
-          depth += 1
-        }
-
-        return indented
-      })
-      .join('\n')
-  }
-
-  return [
-    '<div align="center">',
-    topRow ? indentBlock(topRow) : '',
-    topRow && bottomRow ? '\t<br />' : '',
-    bottomRow ? indentBlock(bottomRow) : '',
-    '</div>',
-  ]
-    .filter(Boolean)
-    .join('\n')
+  return buildAlignedBlock(
+    'center',
+    [topRow, topRow && bottomRow ? '<br />' : '', bottomRow].filter(Boolean).join('\n'),
+  )
 }
 
 const skillsBlock = (c) => {
@@ -233,15 +241,17 @@ const skillsBlock = (c) => {
   if (!items.length) return 'Add your tech stack icons.'
   const iconSize = Number(c.iconSize ?? 40) || 40
   const icons = items
-    .map((icon) => {
+    .flatMap((icon, index) => {
       const slug = toSkillIconsSlug(icon.slug)
       const src = slug
         ? `https://skillicons.dev/icons?i=${slug}&theme=dark`
         : FALLBACK_ICON
-      return `<img src="${src}" alt="${icon.title}" width="${iconSize}" height="${iconSize}" />`
+      const img = `<img src="${src}" alt="${icon.title}" width="${iconSize}" height="${iconSize}" />`
+      return index < items.length - 1 ? [img, '<span>&nbsp;</span>'] : [img]
     })
-    .join('&nbsp;&nbsp;')
-  return `${icons}`
+    .join('\n')
+
+  return ['<div align="left">', indentBlock(icons), '</div>'].join('\n')
 }
 
 const socialsBlock = (c) => {
@@ -254,20 +264,23 @@ const socialsBlock = (c) => {
   if (!links.length) return 'Add your social links.'
   const iconLinks = links.filter((l) => l.slug)
   const textLinks = links.filter((l) => !l.slug)
-  const iconSize = 28
+  const iconSize = 40
   const icons = iconLinks
-    .map((link) => {
+    .flatMap((link, index) => {
       const slug = link.slug || toSocialSlug(link.label)
       const src = slug ? `https://skillicons.dev/icons?i=${slug}` : FALLBACK_ICON
       const label = link.label || (SOCIAL_ICON_MAP[slug]?.title ?? slug)
-      return `<a href="${link.url}"><img src="${src}" alt="${label}" width="${iconSize}" height="${iconSize}" /></a>`
+      const icon = `<a href="${link.url}"><img src="${src}" alt="${label}" width="${iconSize}" height="${iconSize}" /></a>`
+      return index < iconLinks.length - 1 ? [icon, '<span>&nbsp;</span>'] : [icon]
     })
-    .join('&nbsp;&nbsp;')
-  const list = textLinks.length
-    ? textLinks.map((l) => `- [${l.label}](${l.url})`).join('\n')
+
+  const list = textLinks.map((l) => `- [${l.label}](${l.url})`).join('\n')
+
+  const iconsBlock = icons.length
+    ? ['<div align="left">', indentBlock(icons.join('\n')), '</div>'].join('\n')
     : ''
-  if (icons && list) return `${icons}\n\n${list}`
-  if (icons) return icons
+  if (iconsBlock && list) return `${iconsBlock}\n\n${list}`
+  if (iconsBlock) return iconsBlock
   return list
 }
 
