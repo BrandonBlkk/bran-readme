@@ -177,7 +177,7 @@ const BASE_TEMPLATE_CONTENT = {
     includeAllCommits: false,
     countPrivate: false,
     rankIcon: 'github',
-    bgColor: '#0d1117',
+    bgColor: '#171f2b',
     titleColor: '#58a6ff',
     textColor: '#c9d1d9',
     iconColor: '#58a6ff',
@@ -645,8 +645,10 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
           metaText.split('|').map((p) => p.trim()).forEach((p) => {
             const lMatch = p.match(/^Location:\s*(.+)$/i)
             if (lMatch) location = lMatch[1].trim()
-            const wMatch = p.match(/\[Website\]\(([^)]+)\)/i)
-            if (wMatch) website = wMatch[1].trim()
+            const wMatch = p.match(
+              /<a\s+href="([^"]+)"[^>]*>\s*<img[^>]*>\s*<\/a>|\[\!\[[^\]]*\]\([^)]+\)\]\(([^)]+)\)|\[Website\]\(([^)]+)\)/i
+            )
+            if (wMatch) website = (wMatch[1] ?? wMatch[2] ?? wMatch[3] ?? '').trim()
           })
         }
         addSectionInt('header', {
@@ -1001,7 +1003,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
                 <button
                   type="button"
                   onClick={() => setIsRawMode(false)}
-                  className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all sm:text-[11px] select-none ${
+                  className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all sm:text-[11px] select-none cursor-pointer ${
                     !isRawMode ? 'bg-zinc-800 text-zinc-50' : 'text-zinc-500 hover:text-zinc-300'
                   }`}
                 >
@@ -1010,7 +1012,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
                 <button
                   type="button"
                   onClick={() => setIsRawMode(true)}
-                  className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all sm:text-[11px] select-none ${
+                  className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all sm:text-[11px] select-none cursor-pointer ${
                     isRawMode ? 'bg-zinc-800 text-zinc-50' : 'text-zinc-500 hover:text-zinc-300'
                   }`}
                 >
