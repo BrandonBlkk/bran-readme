@@ -148,7 +148,7 @@ const buildWebsiteBadge = (website) => {
   badgeUrl.searchParams.set('style', 'flat-square')
   badgeUrl.searchParams.set('logo', 'googlechrome')
   badgeUrl.searchParams.set('logoColor', 'white')
-  return `<a href="${website}"><img src="${badgeUrl.toString()}" alt="Portfolio" height="24" /></a>`
+  return `<a href="${website}"><img src="${badgeUrl.toString()}" class="select-none inline-block" alt="Portfolio" height="24" /></a>`
 }
 
 const headerBlock = (c) => {

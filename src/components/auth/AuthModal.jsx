@@ -145,7 +145,7 @@ const AuthModal = ({ isOpen, onClose }) => {
             </button>
 
             <div className="flex flex-col items-center text-center">
-              <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full border border-zinc-800 bg-zinc-900/50">
+              <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full border border-zinc-800 bg-zinc-900/50 select-none">
                 <img src="/logo.png" alt="BranReadme Logo" className="h-8 w-8" />
               </div>
 

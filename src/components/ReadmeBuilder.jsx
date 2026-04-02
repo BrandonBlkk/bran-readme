@@ -1003,7 +1003,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
                 <button
                   type="button"
                   onClick={() => setIsRawMode(false)}
-                  className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all sm:text-[11px] select-none ${
+                  className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all sm:text-[11px] select-none cursor-pointer ${
                     !isRawMode ? 'bg-zinc-800 text-zinc-50' : 'text-zinc-500 hover:text-zinc-300'
                   }`}
                 >
@@ -1012,7 +1012,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
                 <button
                   type="button"
                   onClick={() => setIsRawMode(true)}
-                  className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all sm:text-[11px] select-none ${
+                  className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all sm:text-[11px] select-none cursor-pointer ${
                     isRawMode ? 'bg-zinc-800 text-zinc-50' : 'text-zinc-500 hover:text-zinc-300'
                   }`}
                 >
