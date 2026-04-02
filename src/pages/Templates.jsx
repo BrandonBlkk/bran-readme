@@ -295,7 +295,7 @@ const TemplatePreviewModal = ({
               />
             </div>
 
-            <div className="mt-4 flex flex-wrap justify-end gap-2">
+            <div className="mt-4 flex flex-wrap justify-end gap-2 select-none">
               <button
                 type="button"
                 onClick={onClose}
@@ -529,6 +529,7 @@ const Templates = () => {
                           previewMarkdown={previewMarkdown}
                           onUseTemplate={handleUseTemplate}
                           onToggleFavorite={toggleFavorite}
+                          setPreviewTemplate={setPreviewTemplate}
                         />
                       );
                     })

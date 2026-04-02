@@ -12,6 +12,11 @@ const TemplateCard = ({
     setPreviewTemplate
 }) => {
     const pillBase = 'inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]'
+    
+    const handleOpenPreview = () => {
+        if (typeof setPreviewTemplate !== 'function') return
+        setPreviewTemplate({ ...template, previewMarkdown })
+    }
 
     return (
         <article
@@ -23,7 +28,7 @@ const TemplateCard = ({
         >
             <TemplateMockup
                 markdown={previewMarkdown}
-                onClick={() => setPreviewTemplate({ ...template, previewMarkdown })}
+                onClick={handleOpenPreview}
             />
 
             <div className="flex items-start justify-between gap-4">
@@ -61,9 +66,9 @@ const TemplateCard = ({
                 )}
             </div>
 
-            <div className="mt-6 grid grid-cols-2 gap-2">
+            <div className="mt-6 grid grid-cols-2 gap-2 select-none">
                 <button
-                    onClick={() => setPreviewTemplate({ ...template, previewMarkdown })}
+                    onClick={handleOpenPreview}
                     className="flex items-center justify-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 py-2.5 text-xs font-bold text-zinc-400 transition-all hover:bg-zinc-800 hover:text-zinc-200 active:scale-95 select-none cursor-pointer"
                 >
                     <Eye size={14} />
