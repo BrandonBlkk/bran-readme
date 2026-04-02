@@ -163,9 +163,11 @@ const BASE_TEMPLATE_CONTENT = {
     tagline: 'Designing developer experiences that ship.',
     location: 'Yangon, Myanmar',
     website: 'https://brandondevme.vercel.app',
+    align: 'left',
   },
   about: {
     text: 'I build clean, fast developer tooling with a focus on UX and performance.',
+    align: 'left',
   },
   stats: {
     theme: 'transparent',
@@ -188,8 +190,13 @@ const BASE_TEMPLATE_CONTENT = {
   skills: {
     items: ['react', 'typescript', 'tailwindcss', 'vite', 'nodedotjs'],
     iconSize: 40,
+    iconSpacing: 1,
+    align: 'left',
   },
   socials: {
+    iconSize: 40,
+    iconSpacing: 1,
+    align: 'left',
     links: [
       { label: 'LinkedIn', slug: 'linkedin', url: 'https://linkedin.com/in/username' },
       { label: 'Instagram', slug: 'instagram', url: 'https://youtube.com/@username' },
@@ -530,6 +537,47 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
         .map((part) => part.trim())
         .filter(Boolean)
 
+    const parseHeaderMeta = (text) => {
+      let location = ''
+      let website = ''
+
+      String(text ?? '')
+        .split('|')
+        .map((part) => part.trim())
+        .forEach((part) => {
+          const locationMatch = part.match(/^(?:Location:|Based in)\s*(.+)$/i)
+          if (locationMatch) location = locationMatch[1].trim()
+
+          const websiteMatch = part.match(
+            /<a\s+href="([^"]+)"[^>]*>\s*<img[^>]*>\s*<\/a>|\[\!\[[^\]]*\]\([^)]+\)\]\(([^)]+)\)|\[Website\]\(([^)]+)\)/i,
+          )
+          if (websiteMatch) website = (websiteMatch[1] ?? websiteMatch[2] ?? websiteMatch[3] ?? '').trim()
+        })
+
+      return { location, website }
+    }
+
+    const parseAlignedAbout = (text) => {
+      const matches = Array.from(String(text ?? '').matchAll(/<p\s+([^>]*)>([\s\S]*?)<\/p>/gi))
+      if (!matches.length) return null
+
+      const alignMatch = matches[0][1]?.match(/align="(left|center|right)"/i)
+      const body = matches
+        .map((match) =>
+          String(match[2] ?? '')
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/&nbsp;/gi, ' ')
+            .trim(),
+        )
+        .filter(Boolean)
+        .join('\n\n')
+
+      return {
+        text: body,
+        align: (alignMatch?.[1] ?? 'left').toLowerCase(),
+      }
+    }
+
     const parseTextTag = (line) => {
       const match = line.match(/^<(p|h[1-6])\s*([^>]*)>([\s\S]*)<\/\1>\s*$/i)
       if (!match) return null
@@ -612,7 +660,45 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
       })
     }
 
-    blocks.forEach((block) => {
+    for (let index = 0; index < blocks.length; index += 1) {
+      const block = blocks[index]
+      if (index === 0 && block.type === 'text' && block.tag === 'h1') {
+        const base = baseContent('header')
+        let tagline = ''
+        let location = ''
+        let website = ''
+        let consumed = index
+
+        const taglineBlock = blocks[index + 1]
+        if (taglineBlock?.type === 'text' && taglineBlock.tag === 'p') {
+          tagline = taglineBlock.text.replace(/\n+/g, ' ').trim()
+          consumed = index + 1
+        }
+
+        const metaBlock = blocks[consumed + 1]
+        const metaContent = metaBlock?.type === 'free'
+          ? metaBlock.lines.join('\n').trim()
+          : ''
+
+        if (metaContent) {
+          const parsedMeta = parseHeaderMeta(metaContent)
+          location = parsedMeta.location
+          website = parsedMeta.website
+          if (location || website) consumed += 1
+        }
+
+        addSectionInt('header', {
+          ...base,
+          name: block.text,
+          tagline,
+          location,
+          website,
+          align: block.align,
+        })
+        index = consumed
+        continue
+      }
+
       if (block.type === 'text') {
         const base = baseContent('text')
         addSectionInt('text', {
@@ -622,13 +708,13 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
           align: block.align,
           divider: block.divider,
         })
-        return
+        continue
       }
 
       if (block.type === 'free') {
         const content = block.lines.join('\n').trim()
         if (content) addAboutSection('About', content)
-        return
+        continue
       }
 
       const title = block.title.trim()
@@ -639,25 +725,16 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
         const paragraphs = splitParagraphs(content)
         const tagline = paragraphs[0] ? paragraphs[0].replace(/\n+/g, ' ').trim() : ''
         const metaText = paragraphs.slice(1).join(' | ')
-        let location = ''
-        let website = ''
-        if (metaText) {
-          metaText.split('|').map((p) => p.trim()).forEach((p) => {
-            const lMatch = p.match(/^Location:\s*(.+)$/i)
-            if (lMatch) location = lMatch[1].trim()
-            const wMatch = p.match(
-              /<a\s+href="([^"]+)"[^>]*>\s*<img[^>]*>\s*<\/a>|\[\!\[[^\]]*\]\([^)]+\)\]\(([^)]+)\)|\[Website\]\(([^)]+)\)/i
-            )
-            if (wMatch) website = (wMatch[1] ?? wMatch[2] ?? wMatch[3] ?? '').trim()
-          })
-        }
+        const parsedMeta = parseHeaderMeta(metaText)
+        const base = baseContent('header')
         addSectionInt('header', {
+          ...base,
           name: title,
           tagline,
-          location,
-          website,
+          location: parsedMeta.location,
+          website: parsedMeta.website,
         })
-        return
+        continue
       }
 
       if (block.level === 2) {
@@ -746,22 +823,31 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
             }
           }
           addSectionInt('stats', next)
-          return
+          continue
         }
 
         if (titleLower === 'tech stack' || titleLower === 'skills' || titleLower === 'skills icons') {
           addTextTitle(title)
           const base = baseContent('skills')
           const slugMatches = []
-          const regex = /cdn\.simpleicons\.org\/([a-z0-9-]+)/gi
+          const regex = /(?:cdn\.simpleicons\.org\/|skillicons\.dev\/icons\?i=)([a-z0-9-]+)/gi
           let match = regex.exec(content)
           while (match) {
             slugMatches.push(match[1])
             match = regex.exec(content)
           }
           const unique = Array.from(new Set(slugMatches))
-          addSectionInt('skills', { ...base, items: unique })
-          return
+          const sizeMatch = content.match(/<img[^>]*width="(\d+)"/i)
+          const spacingMatch = content.match(/<span>((?:&nbsp;)+)<\/span>/i)
+          const alignMatch = content.match(/<div[^>]*align="(left|center|right)"/i)
+          addSectionInt('skills', {
+            ...base,
+            items: unique,
+            ...(sizeMatch ? { iconSize: Number(sizeMatch[1]) } : {}),
+            ...(spacingMatch ? { iconSpacing: (spacingMatch[1].match(/&nbsp;/g) || []).length } : {}),
+            ...(alignMatch ? { align: alignMatch[1].toLowerCase() } : {}),
+          })
+          continue
         }
 
         if (titleLower === 'socials' || titleLower === 'social links') {
@@ -782,16 +868,33 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
               listMatch = regex.exec(content)
             }
           }
-          addSectionInt('socials', { ...base, links })
-          return
+          const sizeMatch = content.match(/<img[^>]*width="(\d+)"/i)
+          const spacingMatch = content.match(/<span>((?:&nbsp;)+)<\/span>/i)
+          const alignMatch = content.match(/<div[^>]*align="(left|center|right)"/i)
+          addSectionInt('socials', {
+            ...base,
+            links,
+            ...(sizeMatch ? { iconSize: Number(sizeMatch[1]) } : {}),
+            ...(spacingMatch ? { iconSpacing: (spacingMatch[1].match(/&nbsp;/g) || []).length } : {}),
+            ...(alignMatch ? { align: alignMatch[1].toLowerCase() } : {}),
+          })
+          continue
         }
 
-        addAboutSection(title || 'About', content)
-        return
+        const alignedAbout = parseAlignedAbout(content)
+        const base = baseContent('about')
+        const titleText = title || 'About'
+        if (titleText) addTextTitle(titleText)
+        addSectionInt('about', {
+          ...base,
+          text: alignedAbout?.text ?? content,
+          align: alignedAbout?.align ?? base.align ?? 'left',
+        })
+        continue
       }
 
       addAboutSection(title || 'About', content)
-    })
+    }
 
     return sectionsOut
   }

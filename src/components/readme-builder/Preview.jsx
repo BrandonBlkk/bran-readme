@@ -168,8 +168,17 @@ const Preview = ({ markdown, previewTheme }) => {
             maxWidth: '100%',
           }
         : undefined
+      const techIconStyle = isTechIcon
+        && Number.isFinite(numericWidth)
+        && numericWidth > 0
+        ? {
+            width: `${numericWidth}px`,
+            height: Number.isFinite(numericHeight) && numericHeight > 0 ? `${numericHeight}px` : 'auto',
+            maxWidth: 'none',
+          }
+        : undefined
       const className = isTechIcon
-        ? 'inline-block align-middle h-auto w-[clamp(24px,5vw,40px)] max-w-none'
+        ? 'inline-block align-middle h-auto max-w-none'
         : isBadge
           ? 'inline-block align-middle max-w-full'
         : isGitStats
@@ -182,7 +191,7 @@ const Preview = ({ markdown, previewTheme }) => {
           width={width}
           height={height}
           className={`${className} ${selectNone}`}
-          style={statsStyle ?? badgeStyle}
+          style={techIconStyle ?? statsStyle ?? badgeStyle}
           {...props}
         />
       )

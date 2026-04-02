@@ -78,6 +78,18 @@ const clampNumber = (value, min, max, fallback) => {
   if (Number.isNaN(numeric)) return fallback
   return Math.min(max, Math.max(min, numeric))
 }
+const getIconSize = (value, fallback = 40) =>
+  Math.round(clampNumber(value, 18, 40, fallback))
+const getIconSpacing = (value, fallback = 1) =>
+  Math.round(clampNumber(value, 0, 6, fallback))
+const getContentAlign = (value, fallback = 'left') => {
+  const candidate = String(value ?? fallback).toLowerCase()
+  return TEXT_ALIGNMENTS.includes(candidate) ? candidate : fallback
+}
+const buildIconSpacer = (value, fallback = 1) => {
+  const spacing = getIconSpacing(value, fallback)
+  return spacing > 0 ? `<span>${'&nbsp;'.repeat(spacing)}</span>` : ''
+}
 
 export const buildStatsUrl = (content) => {
   const url = new URL('https://github-readme-stats-delta-eight-12.vercel.app/api')
@@ -186,15 +198,20 @@ const buildAlignedBlock = (align, content) => [
   .join('\n')
 
 const headerBlock = (c) => {
+  const align = getContentAlign(c.align, 'left')
   const lines = []
-  if (c.name) lines.push(`# ${c.name}`)
-  if (c.tagline) lines.push(c.tagline)
+  if (c.name) {
+    lines.push(align === 'left' ? `# ${c.name}` : `<h1 align="${align}">${c.name}</h1>`)
+  }
+  if (c.tagline) {
+    lines.push(align === 'left' ? c.tagline : `<p align="${align}">${c.tagline}</p>`)
+  }
   const meta = []
   if (c.location) meta.push(`Based in ${c.location}`)
   if (c.website) meta.push(buildWebsiteBadge(c.website))
 
   if (meta.length) {
-    lines.push(buildAlignedBlock('left', meta.join(' | ')))
+    lines.push(buildAlignedBlock(align, meta.join(' | ')))
   }
 
   return lines.join('\n\n')
@@ -240,7 +257,9 @@ const skillsBlock = (c) => {
     .map((slug) => TECH_ICON_MAP[slug] ?? { title: slug, slug })
     .filter(Boolean)
   if (!items.length) return 'Add your tech stack icons.'
-  const iconSize = Number(c.iconSize ?? 40) || 40
+  const align = getContentAlign(c.align, 'left')
+  const iconSize = getIconSize(c.iconSize, 40)
+  const spacer = buildIconSpacer(c.iconSpacing, 1)
   const icons = items
     .flatMap((icon, index) => {
       const slug = toSkillIconsSlug(icon.slug)
@@ -248,11 +267,11 @@ const skillsBlock = (c) => {
         ? `https://skillicons.dev/icons?i=${slug}&theme=dark`
         : FALLBACK_ICON
       const img = `<img src="${src}" alt="${icon.title}" width="${iconSize}" height="${iconSize}" />`
-      return index < items.length - 1 ? [img, '<span>&nbsp;</span>'] : [img]
+      return index < items.length - 1 && spacer ? [img, spacer] : [img]
     })
     .join('\n')
 
-  return ['<div align="left">', indentBlock(icons), '</div>'].join('\n')
+  return [`<div align="${align}">`, indentBlock(icons), '</div>'].join('\n')
 }
 
 const socialsBlock = (c) => {
@@ -263,22 +282,24 @@ const socialsBlock = (c) => {
     }))
     .filter((l) => l.label && l.url)
   if (!links.length) return 'Add your social links.'
+  const align = getContentAlign(c.align, 'left')
   const iconLinks = links.filter((l) => l.slug)
   const textLinks = links.filter((l) => !l.slug)
-  const iconSize = 40
+  const iconSize = getIconSize(c.iconSize, 40)
+  const spacer = buildIconSpacer(c.iconSpacing, 1)
   const icons = iconLinks
     .flatMap((link, index) => {
       const slug = link.slug || toSocialSlug(link.label)
       const src = slug ? `https://skillicons.dev/icons?i=${slug}` : FALLBACK_ICON
       const label = link.label || (SOCIAL_ICON_MAP[slug]?.title ?? slug)
       const icon = `<a href="${link.url}"><img src="${src}" alt="${label}" width="${iconSize}" height="${iconSize}" /></a>`
-      return index < iconLinks.length - 1 ? [icon, '<span>&nbsp;</span>'] : [icon]
+      return index < iconLinks.length - 1 && spacer ? [icon, spacer] : [icon]
     })
 
   const list = textLinks.map((l) => `- [${l.label}](${l.url})`).join('\n')
 
   const iconsBlock = icons.length
-    ? ['<div align="left">', indentBlock(icons.join('\n')), '</div>'].join('\n')
+    ? [`<div align="${align}">`, indentBlock(icons.join('\n')), '</div>'].join('\n')
     : ''
   if (iconsBlock && list) return `${iconsBlock}\n\n${list}`
   if (iconsBlock) return iconsBlock
@@ -287,7 +308,15 @@ const socialsBlock = (c) => {
 
 const aboutBlock = (c) => {
   if (!c.text) return ''
-  return `${c.text}`
+  const align = getContentAlign(c.align, 'left')
+  if (align === 'left') return `${c.text}`
+
+  return String(c.text)
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+    .map((paragraph) => `<p align="${align}">${paragraph.replace(/\r?\n/g, '<br />')}</p>`)
+    .join('\n\n')
 }
 
 const textBlock = (c) => {

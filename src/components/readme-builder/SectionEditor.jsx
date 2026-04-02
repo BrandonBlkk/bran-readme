@@ -40,6 +40,17 @@ const HeaderEditor = ({ section, updateSection }) => {
           placeholder="https://brandondevme.vercel.app"
         />
       </Field>
+      <Field label="Alignment">
+        <select
+          className={inputClass}
+          value={c.align ?? 'left'}
+          onChange={(e) => updateSection(section.id, { align: e.target.value })}
+        >
+          {['left', 'center', 'right'].map((align) => (
+            <option key={align} value={align}>{align}</option>
+          ))}
+        </select>
+      </Field>
     </div>
   )
 }
@@ -55,6 +66,17 @@ const AboutEditor = ({ section, updateSection }) => {
           onChange={(e) => updateSection(section.id, { text: e.target.value })}
           placeholder="Tell the world what you are building."
         />
+      </Field>
+      <Field label="Alignment">
+        <select
+          className={inputClass}
+          value={c.align ?? 'left'}
+          onChange={(e) => updateSection(section.id, { align: e.target.value })}
+        >
+          {['left', 'center', 'right'].map((align) => (
+            <option key={align} value={align}>{align}</option>
+          ))}
+        </select>
       </Field>
     </div>
   )
@@ -199,7 +221,33 @@ const SkillsEditor = ({ section, updateSection, techOptions, fallbackIcon }) => 
 
   return (
     <div className="grid gap-4">
-      <RangeField label="Icon Size" min={18} max={40} value={c.iconSize ?? 32} onChange={(v) => updateSection(section.id, { iconSize: v })} />
+      <div className="grid gap-4">
+        <RangeField
+          label="Icon Size"
+          min={18}
+          max={40}
+          value={c.iconSize ?? 40}
+          onChange={(v) => updateSection(section.id, { iconSize: v })}
+        />
+        <RangeField
+          label="Icon Spacing"
+          min={0}
+          max={6}
+          value={c.iconSpacing ?? 1}
+          onChange={(v) => updateSection(section.id, { iconSpacing: v })}
+        />
+        <Field label="Alignment">
+          <select
+            className={inputClass}
+            value={c.align ?? 'left'}
+            onChange={(e) => updateSection(section.id, { align: e.target.value })}
+          >
+            {['left', 'center', 'right'].map((align) => (
+              <option key={align} value={align}>{align}</option>
+            ))}
+          </select>
+        </Field>
+      </div>
       <Field label="Search Tech">
         <input
           className={inputClass}
@@ -424,6 +472,33 @@ const addSocial = (icon) => {
 
   return (
     <div className="grid gap-4">
+      <div className="grid gap-4">
+        <RangeField
+          label="Icon Size"
+          min={18}
+          max={40}
+          value={c.iconSize ?? 40}
+          onChange={(v) => updateSection(section.id, { iconSize: v })}
+        />
+        <RangeField
+          label="Icon Spacing"
+          min={0}
+          max={6}
+          value={c.iconSpacing ?? 1}
+          onChange={(v) => updateSection(section.id, { iconSpacing: v })}
+        />
+        <Field label="Alignment">
+          <select
+            className={inputClass}
+            value={c.align ?? 'left'}
+            onChange={(e) => updateSection(section.id, { align: e.target.value })}
+          >
+            {['left', 'center', 'right'].map((align) => (
+              <option key={align} value={align}>{align}</option>
+            ))}
+          </select>
+        </Field>
+      </div>
       <Field label="Search Socials">
         <input
           className={inputClass}
