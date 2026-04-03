@@ -16,6 +16,7 @@
     "@headlessui/react": "^2.1.10",
     "@supabase/supabase-js": "^2.100.1",
     "@tailwindcss/vite": "^4.2.2",
+    "@vercel/analytics": "^2.0.1",
     "daisyui": "^5.5.19",
     "framer-motion": "^12.38.0",
     "lucide-react": "^0.544.0",
