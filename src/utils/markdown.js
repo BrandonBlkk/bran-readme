@@ -161,7 +161,7 @@ const buildWebsiteBadge = (website) => {
   badgeUrl.searchParams.set('logo', 'buymeacoffee')
   badgeUrl.searchParams.set('logoColor', 'white')
   
-  return `<a href="${website}"><img src="${badgeUrl.toString()}" alt="Portfolio" align="absmiddle" /></a>`
+  return `<a href="${website}" target="_blank"><img src="${badgeUrl.toString()}" alt="Portfolio" align="absmiddle" /></a>`
 }
 
 const indentBlock = (block, baseDepth = 1) => {
