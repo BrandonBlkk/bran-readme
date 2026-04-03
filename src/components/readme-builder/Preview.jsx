@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import rehypeRaw from 'rehype-raw'
 import remarkGfm from 'remark-gfm'
@@ -29,8 +29,18 @@ const hasOnlyVisualChildren = (children) => {
   return nodes.length > 0 && nodes.every(isVisualOnlyNode)
 }
 
-const Preview = ({ markdown, previewTheme }) => {
+const Preview = ({
+  markdown,
+  previewTheme,
+  interactiveSections = [],
+  onSectionSelect,
+}) => {
+  const [hoveredSectionId, setHoveredSectionId] = useState(null)
   const isDark = previewTheme === 'dark'
+  const isInteractivePreview =
+    Array.isArray(interactiveSections)
+    && interactiveSections.length > 0
+    && typeof onSectionSelect === 'function'
   const theme = {
     container: isDark
       ? 'border-[#30363d] bg-[#0d1117] text-[#e6edf3]'
@@ -39,6 +49,9 @@ const Preview = ({ markdown, previewTheme }) => {
     link: isDark ? 'text-[#58a6ff]' : 'text-[#0969da]',
     codeBg: isDark ? 'bg-[#161b22]' : 'bg-[#f6f8fa]',
     blockquote: isDark ? 'border-[#30363d] text-[#7d8590]' : 'border-[#d0d7de] text-[#656d76]',
+    sectionActive: isDark
+      ? 'border-[rgba(88,166,255,0.65)] shadow-[0_0_0_1px_rgba(88,166,255,0.16)]'
+      : 'border-[rgba(9,105,218,0.45)] shadow-[0_0_0_1px_rgba(9,105,218,0.1)]',
   }
 
   const components = {
@@ -108,9 +121,16 @@ const Preview = ({ markdown, previewTheme }) => {
       const isOnlyVisual = hasOnlyVisualChildren(children)
       return (
         <a
-          className={[className, theme.link, 'hover:underline', isOnlyVisual ? 'select-none' : '']
+          className={[
+            className,
+            theme.link,
+            'hover:underline',
+            isOnlyVisual ? 'select-none' : '',
+            isInteractivePreview ? 'pointer-events-none' : '',
+          ]
             .filter(Boolean)
             .join(' ')}
+          tabIndex={isInteractivePreview ? -1 : undefined}
           {...props}
         >
           {children}
@@ -198,20 +218,65 @@ const Preview = ({ markdown, previewTheme }) => {
     },
   }
 
+  const renderMarkdownBlock = (value) => (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      rehypePlugins={[rehypeRaw]}
+      components={components}
+    >
+      {value}
+    </ReactMarkdown>
+  )
+
   return (
     <div
       className={`w-full max-w-220 rounded-xl border ${theme.container} shadow-[0_4px_12px_rgba(0,0,0,0.5)]`}
     >
       <div className="px-4 py-5 sm:px-6 md:px-10 md:py-8">
         <div className="wrap-break-word text-sm leading-normal sm:text-base font-['-apple-system', BlinkMacSystemFont,'Segoe_UI','Noto_Sans',Helvetica,Arial,sans-serif]">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeRaw]}
-            components={components}
-          >
-            {markdown}
-          </ReactMarkdown>
-          {!markdown && (
+          {isInteractivePreview ? (
+            interactiveSections.map((section) => {
+              const sectionMarkdown = String(section.markdown ?? '').trim()
+              if (!sectionMarkdown) return null
+
+              const isHovered = hoveredSectionId === section.id
+
+              return (
+                <div
+                  key={section.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Edit ${section.label}`}
+                  className={`-mx-3 rounded-lg border px-3 py-2.5 text-left outline-none transition-all duration-150 touch-manipulation cursor-pointer ${
+                    isHovered ? theme.sectionActive : 'border-transparent'
+                  } ${
+                    isDark
+                      ? 'focus-visible:border-[rgba(88,166,255,0.65)] focus-visible:shadow-[0_0_0_1px_rgba(88,166,255,0.16)]'
+                      : 'focus-visible:border-[rgba(9,105,218,0.45)] focus-visible:shadow-[0_0_0_1px_rgba(9,105,218,0.1)]'
+                  }`}
+                  onMouseEnter={() => setHoveredSectionId(section.id)}
+                  onMouseLeave={() => setHoveredSectionId((current) => (
+                    current === section.id ? null : current
+                  ))}
+                  onClick={(event) => {
+                    event.preventDefault()
+                    onSectionSelect(section.id)
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      onSectionSelect(section.id)
+                    }
+                  }}
+                >
+                  {renderMarkdownBlock(sectionMarkdown)}
+                </div>
+              )
+            })
+          ) : (
+            renderMarkdownBlock(markdown)
+          )}
+          {!markdown && !interactiveSections.length && (
             <p className={`text-sm ${theme.muted}`}>
               Start adding sections to see the preview.
             </p>
