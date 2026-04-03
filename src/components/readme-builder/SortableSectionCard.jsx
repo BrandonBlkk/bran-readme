@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useSortable, defaultAnimateLayoutChanges } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -10,6 +10,9 @@ const SortableSectionCard = ({
   description,
   pillLabel,
   pillClass,
+  containerRef,
+  highlightSignal = 0,
+  isHighlighted = false,
   children,
 }) => {
   const [isOpen, setIsOpen] = useState(true)
@@ -24,14 +27,34 @@ const SortableSectionCard = ({
     transition: transition ?? undefined,
   }
 
+  useEffect(() => {
+    if (!highlightSignal) return
+
+    const timeoutId = setTimeout(() => {
+      setIsOpen(true)
+    }, 0)
+
+    return () => clearTimeout(timeoutId)
+  }, [highlightSignal])
+
+  const handleContainerRef = (node) => {
+    setNodeRef(node)
+
+    if (typeof containerRef === 'function') {
+      containerRef(node)
+    }
+  }
+
   return (
     <div
-      ref={setNodeRef}
+      ref={handleContainerRef}
       style={dndStyle}
       className={`rounded-xl border bg-zinc-900 p-4 transition-all duration-150 hover:border-zinc-700 ${
         isDragging
           ? 'z-50 border-blue-500 opacity-40 shadow-[0_0_24px_rgba(59,130,246,0.08)]'
-          : 'border-zinc-800'
+          : isHighlighted
+            ? 'border-blue-500/70 shadow-[0_0_0_1px_rgba(59,130,246,0.18)]'
+            : 'border-zinc-800'
       }`}
     >
       {/* Card Header */}

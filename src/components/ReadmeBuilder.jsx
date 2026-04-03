@@ -1,4 +1,5 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react'
+import { useRef } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import {
@@ -442,12 +443,24 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
   const [activeId, setActiveId] = useState(null)
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false)
+  const [focusedSectionRequest, setFocusedSectionRequest] = useState(null)
+  const sectionCardRefs = useRef(new Map())
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   )
   const activeSection = useMemo(
     () => sections.find((s) => s.id === activeId) ?? null,
     [activeId, sections],
+  )
+  const focusedSectionId = focusedSectionRequest?.id ?? null
+  const previewSections = useMemo(
+    () =>
+      sections.map((section) => ({
+        id: section.id,
+        label: SECTION_LABELS[section.type] ?? 'Section',
+        markdown: generateMarkdown([section]),
+      })),
+    [sections],
   )
 
   useEffect(() => {
@@ -515,6 +528,25 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
     profileLocation,
     syncProfileDefaults,
   ])
+
+  useEffect(() => {
+    if (!focusedSectionRequest || typeof window === 'undefined') return undefined
+
+    const isMobileViewport = window.innerWidth < 1024
+    if (isMobileViewport && !isEditorOpen) return undefined
+
+    const frameId = window.requestAnimationFrame(() => {
+      const target = sectionCardRefs.current.get(focusedSectionRequest.id)
+      if (!target) return
+
+      target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      })
+    })
+
+    return () => window.cancelAnimationFrame(frameId)
+  }, [focusedSectionRequest, isEditorOpen])
 
   const parseRawToSections = (raw) => {
     const existingByType = new Map()
@@ -943,6 +975,26 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
     navigate('/templates?create=1')
   }
 
+  const registerSectionCardRef = (sectionId) => (node) => {
+    if (node) {
+      sectionCardRefs.current.set(sectionId, node)
+      return
+    }
+
+    sectionCardRefs.current.delete(sectionId)
+  }
+
+  const handlePreviewSectionSelect = (sectionId) => {
+    setFocusedSectionRequest({
+      id: sectionId,
+      signal: Date.now(),
+    })
+
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setIsEditorOpen(true)
+    }
+  }
+
   return (
     <div className="flex flex-1 flex-col">
       <Navbar
@@ -1045,6 +1097,9 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
                             description={SECTION_DESCRIPTIONS[section.type]}
                             pillLabel={section.type}
                             pillClass={getSectionPillClass(section.type)}
+                            containerRef={registerSectionCardRef(section.id)}
+                            highlightSignal={focusedSectionId === section.id ? focusedSectionRequest?.signal ?? 0 : 0}
+                            isHighlighted={focusedSectionId === section.id}
                           >
                             <div className="mb-3 flex justify-end">
                               <button
@@ -1150,13 +1205,25 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
               />
             ) : (
               <Preview
-                markdown={isRawDirty ? rawMarkdown : markdown}
+                markdown={markdown}
                 previewTheme={previewTheme}
+                interactiveSections={previewSections}
+                onSectionSelect={handlePreviewSectionSelect}
               />
             )}
           </div>
         </div>
       </div>
+
+      {isEditorOpen && (
+        <button
+          type="button"
+          onClick={() => setIsEditorOpen(false)}
+          className="fixed bottom-16 left-3 z-40 rounded-full border border-zinc-800 bg-zinc-950 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-400 shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-all duration-150 hover:border-zinc-700 hover:text-zinc-200 lg:hidden cursor-pointer select-none"
+        >
+          Back to Preview
+        </button>
+      )}
 
       {/* Floating Feedback Button */}
       <button
