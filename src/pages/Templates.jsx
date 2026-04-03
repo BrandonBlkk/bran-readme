@@ -23,6 +23,18 @@ const copyToClipboard = async (value) => {
   await navigator.clipboard.writeText(value)
 }
 
+const hasBlockedClipboardError = (error) => {
+  const name = String(error?.name ?? '').toLowerCase()
+  const message = String(error?.message ?? '').toLowerCase()
+
+  return (
+    name.includes('notallowed')
+    || message.includes('not allowed')
+    || message.includes('denied permission')
+    || message.includes('user agent or the platform')
+  )
+}
+
 const makeShareUrl = (templateId) => {
   if (typeof window === 'undefined') return `/templates?template=${templateId}`
 
@@ -145,8 +157,7 @@ const Templates = () => {
 
       addCommunityTemplate(createdTemplate)
       setIsCreateOpen(false)
-      toast.success('Template created and shared.')
-      await handleShareTemplate(createdTemplate.id)
+      toast.success('Template created successfully.')
     } catch (error) {
       toast.error(error.message || 'Template creation failed.')
     } finally {
