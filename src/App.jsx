@@ -6,19 +6,25 @@ import Templates from './pages/Templates'
 import NotFound from './pages/NotFound'
 import LandingPage from './pages/LandingPage'
 import useGithubProfileSync from './hooks/useGithubProfileSync'
+import { Analytics } from '@vercel/analytics/react'
 
 const App = () => {
   useGithubProfileSync()
 
   return (
-    <Routes>
-      <Route path="/landing" element={<LandingPage />} />
-      <Route path="/" element={<Home />} />
-      <Route path="/about" element={<About />} />
-      <Route path="/settings" element={<Settings />} />
-      <Route path="/templates" element={<Templates />} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <>
+      {/* Vercel Analytics */}
+      <Analytics /> 
+
+      <Routes>
+        <Route path="/landing" element={<LandingPage />} />
+        <Route path="/" element={<Home />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/templates" element={<Templates />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </>
   )
 }
 
