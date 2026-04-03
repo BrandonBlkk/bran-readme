@@ -73,6 +73,23 @@ const toSocialSlug = (value) => {
 }
 
 const sanitizeHex = (value) => String(value ?? '').replace('#', '').trim()
+const clampNumber = (value, min, max, fallback) => {
+  const numeric = Number(value)
+  if (Number.isNaN(numeric)) return fallback
+  return Math.min(max, Math.max(min, numeric))
+}
+const getIconSize = (value, fallback = 40) =>
+  Math.round(clampNumber(value, 18, 40, fallback))
+const getIconSpacing = (value, fallback = 1) =>
+  Math.round(clampNumber(value, 0, 6, fallback))
+const getContentAlign = (value, fallback = 'left') => {
+  const candidate = String(value ?? fallback).toLowerCase()
+  return TEXT_ALIGNMENTS.includes(candidate) ? candidate : fallback
+}
+const buildIconSpacer = (value, fallback = 1) => {
+  const spacing = getIconSpacing(value, fallback)
+  return spacing > 0 ? `<span>${'&nbsp;'.repeat(spacing)}</span>` : ''
+}
 
 export const buildStatsUrl = (content) => {
   const url = new URL('https://github-readme-stats-delta-eight-12.vercel.app/api')
@@ -125,14 +142,78 @@ const buildTrophyStatsUrl = (content) => {
   return url.toString()
 }
 
+const getStatsCardDimensions = (content) => {
+  const widthScale = clampNumber(content.cardWidth, 300, 600, 420) / 420
+  const heightScale = clampNumber(content.lineHeight, 18, 40, 28) / 28
+
+  return {
+    width: Math.round(390 * widthScale),
+    height: Math.round(195 * heightScale),
+  }
+}
+
+const buildWebsiteBadge = (website) => {
+  const badgeUrl = new URL('https://img.shields.io/static/v1')
+  badgeUrl.searchParams.set('label', '')
+  badgeUrl.searchParams.set('message', 'PORTFOLIO') 
+  badgeUrl.searchParams.set('color', '#FF2056')
+  badgeUrl.searchParams.set('style', 'for-the-badge')
+  badgeUrl.searchParams.set('logo', 'buymeacoffee')
+  badgeUrl.searchParams.set('logoColor', 'white')
+  
+  return `<a href="${website}" target="_blank"><img src="${badgeUrl.toString()}" alt="Portfolio" align="absmiddle" /></a>`
+}
+
+const indentBlock = (block, baseDepth = 1) => {
+  let depth = 0
+  return String(block ?? '')
+    .split('\n')
+    .map((line) => {
+      const trimmed = line.trim()
+      if (!trimmed) return ''
+
+      if (trimmed.startsWith('</')) {
+        depth = Math.max(0, depth - 1)
+      }
+
+      const indented = `${'\t'.repeat(baseDepth + depth)}${trimmed}`
+
+      const isOpeningTag = /^<([a-z][^/\s>]*)\b[^>]*>$/i.test(trimmed)
+      const isSelfClosing = /\/>$/.test(trimmed)
+      if (isOpeningTag && !isSelfClosing) {
+        depth += 1
+      }
+
+      return indented
+    })
+    .join('\n')
+}
+
+const buildAlignedBlock = (align, content) => [
+  `<div align="${align}">`,
+  indentBlock(content),
+  '</div>',
+]
+  .filter((line) => String(line ?? '').trim().length > 0)
+  .join('\n')
+
 const headerBlock = (c) => {
+  const align = getContentAlign(c.align, 'left')
   const lines = []
-  if (c.name) lines.push(`# ${c.name}`)
-  if (c.tagline) lines.push(c.tagline)
+  if (c.name) {
+    lines.push(align === 'left' ? `# ${c.name}` : `<h1 align="${align}">${c.name}</h1>`)
+  }
+  if (c.tagline) {
+    lines.push(align === 'left' ? c.tagline : `<p align="${align}">${c.tagline}</p>`)
+  }
   const meta = []
-  if (c.location) meta.push(`Location: ${c.location}`)
-  if (c.website) meta.push(`[Website](${c.website})`)
-  if (meta.length) lines.push(meta.join(' | '))
+  if (c.location) meta.push(`Based in ${c.location}`)
+  if (c.website) meta.push(buildWebsiteBadge(c.website))
+
+  if (meta.length) {
+    lines.push(buildAlignedBlock(align, meta.join(' | ')))
+  }
+
   return lines.join('\n\n')
 }
 
@@ -149,54 +230,26 @@ const statsBlock = (c) => {
 
   if (!mainCard && !languageCard && !trophyCard) return 'Enable at least one GitHub card.'
 
-  const cardWidth = 390
-  const cardHeight = 195
+  const { width: cardWidth, height: cardHeight } = getStatsCardDimensions(c)
   const trophyWidth = 650
   const renderTopCard = (card) =>
     `<img src="${card.src}" alt="${card.alt}" width="${cardWidth}" height="${cardHeight}" />`
   const renderTrophyCard = (card) =>
     `<img src="${card.src}" alt="${card.alt}" width="${trophyWidth}" />`
   const topRowCards = [mainCard, languageCard].filter(Boolean)
-  const topRow = topRowCards.length
-    ? `<div align="center">\n${topRowCards.map(renderTopCard).join('\n&nbsp;&nbsp;\n')}\n</div>`
-    : ''
+  const topRow = topRowCards.length === 2
+    ? buildAlignedBlock('center', topRowCards.map(renderTopCard).join('\n'))
+    : topRowCards.length === 1
+      ? buildAlignedBlock('center', renderTopCard(topRowCards[0]))
+      : ''
   const bottomRow = trophyCard
-    ? `<div align="center">\n${renderTrophyCard(trophyCard)}\n</div>`
+    ? buildAlignedBlock('center', renderTrophyCard(trophyCard))
     : ''
-  const indentBlock = (block, baseDepth = 1) => {
-    let depth = 0
-    return String(block ?? '')
-      .split('\n')
-      .map((line) => {
-        const trimmed = line.trim()
-        if (!trimmed) return ''
 
-        if (trimmed.startsWith('</')) {
-          depth = Math.max(0, depth - 1)
-        }
-
-        const indented = `${'\t'.repeat(baseDepth + depth)}${trimmed}`
-
-        const isOpeningTag = /^<([a-z][^/\s>]*)\b[^>]*>$/i.test(trimmed)
-        const isSelfClosing = /\/>$/.test(trimmed)
-        if (isOpeningTag && !isSelfClosing) {
-          depth += 1
-        }
-
-        return indented
-      })
-      .join('\n')
-  }
-
-  return [
-    '<div align="center">',
-    topRow ? indentBlock(topRow) : '',
-    topRow && bottomRow ? '\t<br />' : '',
-    bottomRow ? indentBlock(bottomRow) : '',
-    '</div>',
-  ]
-    .filter(Boolean)
-    .join('\n')
+  return buildAlignedBlock(
+    'center',
+    [topRow, topRow && bottomRow ? '<br />' : '', bottomRow].filter(Boolean).join('\n'),
+  )
 }
 
 const skillsBlock = (c) => {
@@ -204,17 +257,21 @@ const skillsBlock = (c) => {
     .map((slug) => TECH_ICON_MAP[slug] ?? { title: slug, slug })
     .filter(Boolean)
   if (!items.length) return 'Add your tech stack icons.'
-  const iconSize = Number(c.iconSize ?? 40) || 40
+  const align = getContentAlign(c.align, 'left')
+  const iconSize = getIconSize(c.iconSize, 40)
+  const spacer = buildIconSpacer(c.iconSpacing, 1)
   const icons = items
-    .map((icon) => {
+    .flatMap((icon, index) => {
       const slug = toSkillIconsSlug(icon.slug)
       const src = slug
         ? `https://skillicons.dev/icons?i=${slug}&theme=dark`
         : FALLBACK_ICON
-      return `<img src="${src}" alt="${icon.title}" width="${iconSize}" height="${iconSize}" />`
+      const img = `<img src="${src}" alt="${icon.title}" width="${iconSize}" height="${iconSize}" />`
+      return index < items.length - 1 && spacer ? [img, spacer] : [img]
     })
-    .join('&nbsp;&nbsp;')
-  return `${icons}`
+    .join('\n')
+
+  return [`<div align="${align}">`, indentBlock(icons), '</div>'].join('\n')
 }
 
 const socialsBlock = (c) => {
@@ -225,28 +282,41 @@ const socialsBlock = (c) => {
     }))
     .filter((l) => l.label && l.url)
   if (!links.length) return 'Add your social links.'
+  const align = getContentAlign(c.align, 'left')
   const iconLinks = links.filter((l) => l.slug)
   const textLinks = links.filter((l) => !l.slug)
-  const iconSize = 28
+  const iconSize = getIconSize(c.iconSize, 40)
+  const spacer = buildIconSpacer(c.iconSpacing, 1)
   const icons = iconLinks
-    .map((link) => {
+    .flatMap((link, index) => {
       const slug = link.slug || toSocialSlug(link.label)
       const src = slug ? `https://skillicons.dev/icons?i=${slug}` : FALLBACK_ICON
       const label = link.label || (SOCIAL_ICON_MAP[slug]?.title ?? slug)
-      return `<a href="${link.url}"><img src="${src}" alt="${label}" width="${iconSize}" height="${iconSize}" /></a>`
+      const icon = `<a href="${link.url}"><img src="${src}" alt="${label}" width="${iconSize}" height="${iconSize}" /></a>`
+      return index < iconLinks.length - 1 && spacer ? [icon, spacer] : [icon]
     })
-    .join('&nbsp;&nbsp;')
-  const list = textLinks.length
-    ? textLinks.map((l) => `- [${l.label}](${l.url})`).join('\n')
+
+  const list = textLinks.map((l) => `- [${l.label}](${l.url})`).join('\n')
+
+  const iconsBlock = icons.length
+    ? [`<div align="${align}">`, indentBlock(icons.join('\n')), '</div>'].join('\n')
     : ''
-  if (icons && list) return `${icons}\n\n${list}`
-  if (icons) return icons
+  if (iconsBlock && list) return `${iconsBlock}\n\n${list}`
+  if (iconsBlock) return iconsBlock
   return list
 }
 
 const aboutBlock = (c) => {
   if (!c.text) return ''
-  return `${c.text}`
+  const align = getContentAlign(c.align, 'left')
+  if (align === 'left') return `${c.text}`
+
+  return String(c.text)
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+    .map((paragraph) => `<p align="${align}">${paragraph.replace(/\r?\n/g, '<br />')}</p>`)
+    .join('\n\n')
 }
 
 const textBlock = (c) => {

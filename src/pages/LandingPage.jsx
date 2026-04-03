@@ -198,7 +198,21 @@ const LandingPage = () => {
                         <h3 className="text-xl font-semibold text-white">Hi, I'm Brandon 👋 </h3>
                         <div className="mt-3 h-px bg-[#262626]" />
                         <p className="mt-3 text-sm text-[#d4d4d4]">Designing developer experiences that ship.</p>
-                        <p className="mt-2 text-sm text-[#d4d4d4]">Location: <span className="font-semibold text-white">San Francisco, CA</span> | <span className="text-blue-400">Website</span></p>
+                        <p className="mt-2 text-sm text-[#d4d4d4]">
+                          Based in <span className="font-semibold text-white">San Francisco, CA</span> |{' '}
+                          <a
+                            href="https://brandondevme.vercel.app"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex align-middle"
+                          >
+                            <img
+                              src="https://img.shields.io/static/v1?label=&message=PORTFOLIO&color=%23FF2056&style=for-the-badge&logo=buymeacoffee&logoColor=white"
+                              alt="Portfolio"
+                              className="h-5 w-auto select-none"
+                            />
+                          </a>
+                        </p>
 
                         <div className="mt-3 h-px bg-[#262626]" />
                         <div className="mt-3 rounded-xl border border-[#1f1f1f] bg-[#101010] p-4 select-none">

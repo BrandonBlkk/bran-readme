@@ -1,4 +1,3 @@
-import React from 'react'
 import { Heart, Eye, Sparkles } from 'lucide-react'
 import TemplateMockup from './TemplateMockup'
 
@@ -9,9 +8,14 @@ const TemplateCard = ({
     previewMarkdown, 
     onUseTemplate, 
     onToggleFavorite,
-    setPreviewTemplate
+    onPreviewTemplate
 }) => {
     const pillBase = 'inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]'
+    
+    const handleOpenPreview = () => {
+        if (typeof onPreviewTemplate !== 'function') return
+        onPreviewTemplate({ ...template, previewMarkdown })
+    }
 
     return (
         <article
@@ -23,7 +27,7 @@ const TemplateCard = ({
         >
             <TemplateMockup
                 markdown={previewMarkdown}
-                onClick={() => setPreviewTemplate({ ...template, previewMarkdown })}
+                onClick={handleOpenPreview}
             />
 
             <div className="flex items-start justify-between gap-4">
@@ -37,12 +41,14 @@ const TemplateCard = ({
                     </p>
                 </div>
                 <button
+                    type="button"
                     onClick={() => onToggleFavorite(template.id)}
                     className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-all cursor-pointer ${
                     isFavorite
                         ? 'border-rose-500/40 bg-rose-400/10 text-rose-500'
                         : 'border-zinc-800 text-zinc-600 hover:text-zinc-300'
                     }`}
+                    aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                 >
                     <Heart size={14} fill={isFavorite ? 'currentColor' : 'none'} />
                 </button>
@@ -61,15 +67,17 @@ const TemplateCard = ({
                 )}
             </div>
 
-            <div className="mt-6 grid grid-cols-2 gap-2">
+            <div className="mt-6 grid grid-cols-2 gap-2 select-none">
                 <button
-                    onClick={() => setPreviewTemplate({ ...template, previewMarkdown })}
+                    type="button"
+                    onClick={handleOpenPreview}
                     className="flex items-center justify-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 py-2.5 text-xs font-bold text-zinc-400 transition-all hover:bg-zinc-800 hover:text-zinc-200 active:scale-95 select-none cursor-pointer"
                 >
                     <Eye size={14} />
                     Preview
                 </button>
                 <button
+                    type="button"
                     onClick={() => onUseTemplate(template)}
                     className="flex items-center justify-center gap-2 rounded-xl bg-zinc-50 py-2.5 text-xs font-bold text-zinc-950 transition-all hover:bg-zinc-200 active:scale-95 select-none cursor-pointer"
                 >

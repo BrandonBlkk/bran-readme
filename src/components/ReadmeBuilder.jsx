@@ -25,6 +25,7 @@ import EmptyState from './readme-builder/EmptyState'
 import GithubModeToggle from './readme-builder/GithubModeToggle'
 import { PENDING_TEMPLATE_KEY } from '../constants/templateFlow'
 import { normalizeTemplatePayload } from '../utils/templatePayload'
+import { DEFAULT_PROFILE, getResolvedProfile, useProfileStore } from '../stores/profileStore'
 import {
   generateMarkdown,
   TECH_OPTIONS,
@@ -43,19 +44,132 @@ const createId = () => {
 
 const clone = (value) => JSON.parse(JSON.stringify(value))
 
+const normalizeTextValue = (value) => String(value ?? '').trim()
+
+const getActiveProfileDefaults = () => {
+  const profile = getResolvedProfile()
+  return {
+    displayName: normalizeTextValue(profile.displayName) || DEFAULT_PROFILE.displayName,
+    githubUser: normalizeTextValue(profile.githubUser) || DEFAULT_PROFILE.githubUser,
+    website: normalizeTextValue(profile.website) || DEFAULT_PROFILE.website,
+    location: normalizeTextValue(profile.location) || DEFAULT_PROFILE.location,
+  }
+}
+
+const shouldReplaceWithProfileDefault = (currentValue, fallbackValue, previousSyncedValue, force) => {
+  const current = normalizeTextValue(currentValue)
+  if (force) return true
+  if (!current) return true
+  if (current === normalizeTextValue(fallbackValue)) return true
+  if (previousSyncedValue && current === normalizeTextValue(previousSyncedValue)) return true
+  return false
+}
+
+const applyProfileDefaultsToSections = (
+  sections,
+  profileDefaults,
+  {
+    force = false,
+    previousDisplayName = '',
+    previousGithubUser = '',
+    previousWebsite = '',
+    previousLocation = '',
+  } = {},
+) => {
+  let hasChanges = false
+
+  const nextSections = sections.map((section) => {
+    if (section.type === 'header') {
+      const nextName = normalizeTextValue(profileDefaults.displayName) || DEFAULT_PROFILE.displayName
+      const nextWebsite = normalizeTextValue(profileDefaults.website) || DEFAULT_PROFILE.website
+      const nextLocation = normalizeTextValue(profileDefaults.location) || DEFAULT_PROFILE.location
+      const currentName = normalizeTextValue(section.content?.name)
+      const currentWebsite = normalizeTextValue(section.content?.website)
+      const currentLocation = normalizeTextValue(section.content?.location)
+      const shouldReplace = shouldReplaceWithProfileDefault(
+        currentName,
+        DEFAULT_PROFILE.displayName,
+        previousDisplayName,
+        force,
+      )
+      const shouldReplaceWebsite = shouldReplaceWithProfileDefault(
+        currentWebsite,
+        DEFAULT_PROFILE.website,
+        previousWebsite,
+        force,
+      )
+      const shouldReplaceLocation = shouldReplaceWithProfileDefault(
+        currentLocation,
+        DEFAULT_PROFILE.location,
+        previousLocation,
+        force,
+      )
+
+      if (
+        (!shouldReplace || currentName === nextName)
+        && (!shouldReplaceWebsite || currentWebsite === nextWebsite)
+        && (!shouldReplaceLocation || currentLocation === nextLocation)
+      ) {
+        return section
+      }
+
+      hasChanges = true
+      return {
+        ...section,
+        content: {
+          ...section.content,
+          ...(shouldReplace && currentName !== nextName ? { name: nextName } : {}),
+          ...(shouldReplaceWebsite && currentWebsite !== nextWebsite ? { website: nextWebsite } : {}),
+          ...(shouldReplaceLocation && currentLocation !== nextLocation ? { location: nextLocation } : {}),
+        },
+      }
+    }
+
+    if (section.type === 'stats') {
+      const nextUsername = normalizeTextValue(profileDefaults.githubUser) || DEFAULT_PROFILE.githubUser
+      const currentUsername = normalizeTextValue(section.content?.username)
+      const shouldReplace = shouldReplaceWithProfileDefault(
+        currentUsername,
+        DEFAULT_PROFILE.githubUser,
+        previousGithubUser,
+        force,
+      )
+
+      if (!shouldReplace || currentUsername === nextUsername) return section
+
+      hasChanges = true
+      return {
+        ...section,
+        content: {
+          ...section.content,
+          username: nextUsername,
+        },
+      }
+    }
+
+    return section
+  })
+
+  return {
+    sections: nextSections,
+    hasChanges,
+  }
+}
+
 /* ── Template Content ──────────────────────────────── */
-const TEMPLATE_CONTENT = {
+const BASE_TEMPLATE_CONTENT = {
   header: {
     name: 'Brandon Developer',
     tagline: 'Designing developer experiences that ship.',
     location: 'Yangon, Myanmar',
     website: 'https://brandondevme.vercel.app',
+    align: 'left',
   },
   about: {
     text: 'I build clean, fast developer tooling with a focus on UX and performance.',
+    align: 'left',
   },
   stats: {
-    username: 'BrandonBlkk',
     theme: 'transparent',
     showMainStats: true,
     showLanguageStats: true,
@@ -65,7 +179,7 @@ const TEMPLATE_CONTENT = {
     includeAllCommits: false,
     countPrivate: false,
     rankIcon: 'github',
-    bgColor: '#0d1117',
+    bgColor: '#171f2b',
     titleColor: '#58a6ff',
     textColor: '#c9d1d9',
     iconColor: '#58a6ff',
@@ -76,8 +190,13 @@ const TEMPLATE_CONTENT = {
   skills: {
     items: ['react', 'typescript', 'tailwindcss', 'vite', 'nodedotjs'],
     iconSize: 40,
+    iconSpacing: 1,
+    align: 'left',
   },
   socials: {
+    iconSize: 40,
+    iconSpacing: 1,
+    align: 'left',
     links: [
       { label: 'LinkedIn', slug: 'linkedin', url: 'https://linkedin.com/in/username' },
       { label: 'Instagram', slug: 'instagram', url: 'https://youtube.com/@username' },
@@ -92,6 +211,23 @@ const TEMPLATE_CONTENT = {
   },
 }
 
+const getTemplateContent = () => {
+  const { displayName, githubUser, website, location } = getActiveProfileDefaults()
+  return {
+    ...clone(BASE_TEMPLATE_CONTENT),
+    header: {
+      ...clone(BASE_TEMPLATE_CONTENT.header),
+      name: displayName,
+      website,
+      location,
+    },
+    stats: {
+      ...clone(BASE_TEMPLATE_CONTENT.stats),
+      username: githubUser,
+    },
+  }
+}
+
 const SECTION_LIBRARY = [
   { type: 'header', label: 'Header', description: 'Name, tagline, and key links.' },
   { type: 'about', label: 'About', description: 'Short bio or mission statement.' },
@@ -104,7 +240,7 @@ const SECTION_LIBRARY = [
 const createSection = (type) => ({
   id: createId(),
   type,
-  content: clone(TEMPLATE_CONTENT[type] ?? {}),
+  content: clone(getTemplateContent()[type] ?? {}),
 })
 
 const createTextTitleSection = (title) => ({
@@ -143,6 +279,10 @@ const useSectionStore = create(
     (set, get) => ({
       sections: getDefaultSections(),
       previewTheme: 'dark',
+      syncedDisplayName: getActiveProfileDefaults().displayName,
+      syncedGithubUsername: getActiveProfileDefaults().githubUser,
+      syncedWebsite: getActiveProfileDefaults().website,
+      syncedLocation: getActiveProfileDefaults().location,
       setPreviewTheme: (theme) => set({ previewTheme: theme }),
       addSection: (type) =>
         set((state) => ({
@@ -174,13 +314,66 @@ const useSectionStore = create(
         if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return
         set({ sections: moveItem(sections, fromIndex, toIndex) })
       },
-      resetToDefaults: () => set({ sections: getDefaultSections(), previewTheme: 'dark' }),
+      syncProfileDefaults: ({ displayName, githubUser, website, location }, options = {}) =>
+        set((state) => {
+          const nextProfileDefaults = {
+            displayName: normalizeTextValue(displayName) || DEFAULT_PROFILE.displayName,
+            githubUser: normalizeTextValue(githubUser) || DEFAULT_PROFILE.githubUser,
+            website: normalizeTextValue(website) || DEFAULT_PROFILE.website,
+            location: normalizeTextValue(location) || DEFAULT_PROFILE.location,
+          }
+
+          const { sections, hasChanges } = applyProfileDefaultsToSections(
+            state.sections,
+            nextProfileDefaults,
+            {
+              force: Boolean(options.force),
+              previousDisplayName: state.syncedDisplayName,
+              previousGithubUser: state.syncedGithubUsername,
+              previousWebsite: state.syncedWebsite,
+              previousLocation: state.syncedLocation,
+            },
+          )
+
+          if (
+            !hasChanges
+            && state.syncedDisplayName === nextProfileDefaults.displayName
+            && state.syncedGithubUsername === nextProfileDefaults.githubUser
+            && state.syncedWebsite === nextProfileDefaults.website
+            && state.syncedLocation === nextProfileDefaults.location
+          ) {
+            return state
+          }
+
+          return {
+            sections,
+            syncedDisplayName: nextProfileDefaults.displayName,
+            syncedGithubUsername: nextProfileDefaults.githubUser,
+            syncedWebsite: nextProfileDefaults.website,
+            syncedLocation: nextProfileDefaults.location,
+          }
+        }),
+      resetToDefaults: () => {
+        const nextProfileDefaults = getActiveProfileDefaults()
+        set({
+          sections: getDefaultSections(),
+          previewTheme: 'dark',
+          syncedDisplayName: nextProfileDefaults.displayName,
+          syncedGithubUsername: nextProfileDefaults.githubUser,
+          syncedWebsite: nextProfileDefaults.website,
+          syncedLocation: nextProfileDefaults.location,
+        })
+      },
     }),
     {
       name: 'readme-builder-store',
       partialize: (state) => ({
         sections: state.sections,
         previewTheme: state.previewTheme,
+        syncedDisplayName: state.syncedDisplayName,
+        syncedGithubUsername: state.syncedGithubUsername,
+        syncedWebsite: state.syncedWebsite,
+        syncedLocation: state.syncedLocation,
       }),
     },
   ),
@@ -228,6 +421,19 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
   const setSections = useSectionStore((s) => s.setSections)
   const updateSection = useSectionStore((s) => s.updateSection)
   const resetToDefaults = useSectionStore((s) => s.resetToDefaults)
+  const syncProfileDefaults = useSectionStore((s) => s.syncProfileDefaults)
+  const profileDisplayName = useProfileStore(
+    (state) => normalizeTextValue(state.profile.displayName) || DEFAULT_PROFILE.displayName,
+  )
+  const profileGithubUsername = useProfileStore(
+    (state) => normalizeTextValue(state.profile.githubUser) || DEFAULT_PROFILE.githubUser,
+  )
+  const profileWebsite = useProfileStore(
+    (state) => normalizeTextValue(state.profile.website) || DEFAULT_PROFILE.website,
+  )
+  const profileLocation = useProfileStore(
+    (state) => normalizeTextValue(state.profile.location) || DEFAULT_PROFILE.location,
+  )
 
   const markdown = useMemo(() => generateMarkdown(sections), [sections])
   const [isRawMode, setIsRawMode] = useState(false)
@@ -271,16 +477,46 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
       const payload = normalizeTemplatePayload(JSON.parse(raw))
       if (!payload.sections.length) return
       setSections(payload.sections)
+      syncProfileDefaults(
+        {
+          displayName: profileDisplayName,
+          githubUser: profileGithubUsername,
+          website: profileWebsite,
+          location: profileLocation,
+        },
+        { force: true },
+      )
       setPreviewTheme(payload.previewTheme)
       toast.success('Template loaded from gallery.')
     } catch {
       // ignore invalid session payload
     }
-  }, [setPreviewTheme, setSections])
+  }, [
+    profileDisplayName,
+    profileGithubUsername,
+    profileWebsite,
+    profileLocation,
+    setPreviewTheme,
+    setSections,
+    syncProfileDefaults,
+  ])
+
+  useEffect(() => {
+    syncProfileDefaults({
+      displayName: profileDisplayName,
+      githubUser: profileGithubUsername,
+      website: profileWebsite,
+      location: profileLocation,
+    })
+  }, [
+    profileDisplayName,
+    profileGithubUsername,
+    profileWebsite,
+    profileLocation,
+    syncProfileDefaults,
+  ])
 
   const parseRawToSections = (raw) => {
-    // This part is a bit complex but we reuse the logic from the original file
-    // For brevity in this replacement, I'll keep the core structure
     const existingByType = new Map()
     sections.forEach((section) => {
       if (!existingByType.has(section.type)) {
@@ -288,8 +524,10 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
       }
     })
 
+    const templateContent = getTemplateContent()
+
     const baseContent = (type) => {
-      const base = existingByType.get(type)?.content ?? TEMPLATE_CONTENT[type] ?? {}
+      const base = existingByType.get(type)?.content ?? templateContent[type] ?? {}
       return clone(base)
     }
 
@@ -298,6 +536,47 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
         .split(/\n\s*\n/)
         .map((part) => part.trim())
         .filter(Boolean)
+
+    const parseHeaderMeta = (text) => {
+      let location = ''
+      let website = ''
+
+      String(text ?? '')
+        .split('|')
+        .map((part) => part.trim())
+        .forEach((part) => {
+          const locationMatch = part.match(/^(?:Location:|Based in)\s*(.+)$/i)
+          if (locationMatch) location = locationMatch[1].trim()
+
+          const websiteMatch = part.match(
+            /<a\s+href="([^"]+)"[^>]*>\s*<img[^>]*>\s*<\/a>|\[\!\[[^\]]*\]\([^)]+\)\]\(([^)]+)\)|\[Website\]\(([^)]+)\)/i,
+          )
+          if (websiteMatch) website = (websiteMatch[1] ?? websiteMatch[2] ?? websiteMatch[3] ?? '').trim()
+        })
+
+      return { location, website }
+    }
+
+    const parseAlignedAbout = (text) => {
+      const matches = Array.from(String(text ?? '').matchAll(/<p\s+([^>]*)>([\s\S]*?)<\/p>/gi))
+      if (!matches.length) return null
+
+      const alignMatch = matches[0][1]?.match(/align="(left|center|right)"/i)
+      const body = matches
+        .map((match) =>
+          String(match[2] ?? '')
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/&nbsp;/gi, ' ')
+            .trim(),
+        )
+        .filter(Boolean)
+        .join('\n\n')
+
+      return {
+        text: body,
+        align: (alignMatch?.[1] ?? 'left').toLowerCase(),
+      }
+    }
 
     const parseTextTag = (line) => {
       const match = line.match(/^<(p|h[1-6])\s*([^>]*)>([\s\S]*)<\/\1>\s*$/i)
@@ -381,7 +660,45 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
       })
     }
 
-    blocks.forEach((block) => {
+    for (let index = 0; index < blocks.length; index += 1) {
+      const block = blocks[index]
+      if (index === 0 && block.type === 'text' && block.tag === 'h1') {
+        const base = baseContent('header')
+        let tagline = ''
+        let location = ''
+        let website = ''
+        let consumed = index
+
+        const taglineBlock = blocks[index + 1]
+        if (taglineBlock?.type === 'text' && taglineBlock.tag === 'p') {
+          tagline = taglineBlock.text.replace(/\n+/g, ' ').trim()
+          consumed = index + 1
+        }
+
+        const metaBlock = blocks[consumed + 1]
+        const metaContent = metaBlock?.type === 'free'
+          ? metaBlock.lines.join('\n').trim()
+          : ''
+
+        if (metaContent) {
+          const parsedMeta = parseHeaderMeta(metaContent)
+          location = parsedMeta.location
+          website = parsedMeta.website
+          if (location || website) consumed += 1
+        }
+
+        addSectionInt('header', {
+          ...base,
+          name: block.text,
+          tagline,
+          location,
+          website,
+          align: block.align,
+        })
+        index = consumed
+        continue
+      }
+
       if (block.type === 'text') {
         const base = baseContent('text')
         addSectionInt('text', {
@@ -391,13 +708,13 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
           align: block.align,
           divider: block.divider,
         })
-        return
+        continue
       }
 
       if (block.type === 'free') {
         const content = block.lines.join('\n').trim()
         if (content) addAboutSection('About', content)
-        return
+        continue
       }
 
       const title = block.title.trim()
@@ -408,23 +725,16 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
         const paragraphs = splitParagraphs(content)
         const tagline = paragraphs[0] ? paragraphs[0].replace(/\n+/g, ' ').trim() : ''
         const metaText = paragraphs.slice(1).join(' | ')
-        let location = ''
-        let website = ''
-        if (metaText) {
-          metaText.split('|').map((p) => p.trim()).forEach((p) => {
-            const lMatch = p.match(/^Location:\s*(.+)$/i)
-            if (lMatch) location = lMatch[1].trim()
-            const wMatch = p.match(/\[Website\]\(([^)]+)\)/i)
-            if (wMatch) website = wMatch[1].trim()
-          })
-        }
+        const parsedMeta = parseHeaderMeta(metaText)
+        const base = baseContent('header')
         addSectionInt('header', {
+          ...base,
           name: title,
           tagline,
-          location,
-          website,
+          location: parsedMeta.location,
+          website: parsedMeta.website,
         })
-        return
+        continue
       }
 
       if (block.level === 2) {
@@ -513,22 +823,31 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
             }
           }
           addSectionInt('stats', next)
-          return
+          continue
         }
 
         if (titleLower === 'tech stack' || titleLower === 'skills' || titleLower === 'skills icons') {
           addTextTitle(title)
           const base = baseContent('skills')
           const slugMatches = []
-          const regex = /cdn\.simpleicons\.org\/([a-z0-9-]+)/gi
+          const regex = /(?:cdn\.simpleicons\.org\/|skillicons\.dev\/icons\?i=)([a-z0-9-]+)/gi
           let match = regex.exec(content)
           while (match) {
             slugMatches.push(match[1])
             match = regex.exec(content)
           }
           const unique = Array.from(new Set(slugMatches))
-          addSectionInt('skills', { ...base, items: unique })
-          return
+          const sizeMatch = content.match(/<img[^>]*width="(\d+)"/i)
+          const spacingMatch = content.match(/<span>((?:&nbsp;)+)<\/span>/i)
+          const alignMatch = content.match(/<div[^>]*align="(left|center|right)"/i)
+          addSectionInt('skills', {
+            ...base,
+            items: unique,
+            ...(sizeMatch ? { iconSize: Number(sizeMatch[1]) } : {}),
+            ...(spacingMatch ? { iconSpacing: (spacingMatch[1].match(/&nbsp;/g) || []).length } : {}),
+            ...(alignMatch ? { align: alignMatch[1].toLowerCase() } : {}),
+          })
+          continue
         }
 
         if (titleLower === 'socials' || titleLower === 'social links') {
@@ -549,16 +868,33 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
               listMatch = regex.exec(content)
             }
           }
-          addSectionInt('socials', { ...base, links })
-          return
+          const sizeMatch = content.match(/<img[^>]*width="(\d+)"/i)
+          const spacingMatch = content.match(/<span>((?:&nbsp;)+)<\/span>/i)
+          const alignMatch = content.match(/<div[^>]*align="(left|center|right)"/i)
+          addSectionInt('socials', {
+            ...base,
+            links,
+            ...(sizeMatch ? { iconSize: Number(sizeMatch[1]) } : {}),
+            ...(spacingMatch ? { iconSpacing: (spacingMatch[1].match(/&nbsp;/g) || []).length } : {}),
+            ...(alignMatch ? { align: alignMatch[1].toLowerCase() } : {}),
+          })
+          continue
         }
 
-        addAboutSection(title || 'About', content)
-        return
+        const alignedAbout = parseAlignedAbout(content)
+        const base = baseContent('about')
+        const titleText = title || 'About'
+        if (titleText) addTextTitle(titleText)
+        addSectionInt('about', {
+          ...base,
+          text: alignedAbout?.text ?? content,
+          align: alignedAbout?.align ?? base.align ?? 'left',
+        })
+        continue
       }
 
       addAboutSection(title || 'About', content)
-    })
+    }
 
     return sectionsOut
   }
@@ -770,7 +1106,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
                 <button
                   type="button"
                   onClick={() => setIsRawMode(false)}
-                  className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all sm:text-[11px] select-none ${
+                  className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all sm:text-[11px] select-none cursor-pointer ${
                     !isRawMode ? 'bg-zinc-800 text-zinc-50' : 'text-zinc-500 hover:text-zinc-300'
                   }`}
                 >
@@ -779,7 +1115,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
                 <button
                   type="button"
                   onClick={() => setIsRawMode(true)}
-                  className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all sm:text-[11px] select-none ${
+                  className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all sm:text-[11px] select-none cursor-pointer ${
                     isRawMode ? 'bg-zinc-800 text-zinc-50' : 'text-zinc-500 hover:text-zinc-300'
                   }`}
                 >

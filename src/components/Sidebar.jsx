@@ -120,7 +120,7 @@ const Sidebar = ({ activePanel, onPanelChange }) => {
       })}
 
       {/* Profile / Auth Section */}
-      <div className="lg:mt-auto lg:mb-4 lg:flex lg:flex-col lg:items-center lg:gap-2">
+      <div className="lg:mt-auto lg:mb-4 lg:flex lg:flex-col lg:items-center lg:gap-2 select-none">
         {user ? (
           <div className="group relative">
             <button
