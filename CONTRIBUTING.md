@@ -67,7 +67,7 @@ To keep the project clean and maintainable, please follow these rules:
 2. **Clone your fork**
 
 ```bash
-git clone https://github.com/BrandonBlkk/branreadme.git
+git clone https://github.com/BrandonBlkk/bran-readme.git
 ```
 
 3. **Create a branch**
