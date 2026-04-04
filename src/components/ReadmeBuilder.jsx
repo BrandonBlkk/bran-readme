@@ -446,7 +446,17 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
   const [focusedSectionRequest, setFocusedSectionRequest] = useState(null)
   const sectionCardRefs = useRef(new Map())
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 4 },
+      onActivation: ({ event }) => {
+        if (event.cancelable) {
+          event.preventDefault()
+        }
+      },
+      bypassActivationConstraint({ event, activeNode }) {
+        return activeNode.activatorNode.current?.contains(event.target)
+      },
+    }),
   )
   const activeSection = useMemo(
     () => sections.find((s) => s.id === activeId) ?? null,
@@ -1219,7 +1229,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
         <button
           type="button"
           onClick={() => setIsEditorOpen(false)}
-          className="fixed bottom-16 left-3 z-40 rounded-full border border-zinc-800 bg-zinc-950 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-400 shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-all duration-150 hover:border-zinc-700 hover:text-zinc-200 lg:hidden cursor-pointer select-none"
+          className="fixed bottom-16 left-3 z-40 rounded-full border border-zinc-800 bg-white px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-all duration-150 hover:border-zinc-700 lg:hidden cursor-pointer select-none"
         >
           Back to Preview
         </button>
