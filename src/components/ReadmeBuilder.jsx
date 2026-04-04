@@ -446,7 +446,17 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
   const [focusedSectionRequest, setFocusedSectionRequest] = useState(null)
   const sectionCardRefs = useRef(new Map())
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 4 },
+      onActivation: ({ event }) => {
+        if (event.cancelable) {
+          event.preventDefault()
+        }
+      },
+      bypassActivationConstraint({ event, activeNode }) {
+        return activeNode.activatorNode.current?.contains(event.target)
+      },
+    }),
   )
   const activeSection = useMemo(
     () => sections.find((s) => s.id === activeId) ?? null,
