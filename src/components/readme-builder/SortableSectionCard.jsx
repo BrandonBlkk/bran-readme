@@ -16,7 +16,15 @@ const SortableSectionCard = ({
   children,
 }) => {
   const [isOpen, setIsOpen] = useState(true)
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
     id,
     animateLayoutChanges: defaultAnimateLayoutChanges,
     transition: { duration: 200, easing: 'cubic-bezier(0.25, 1, 0.5, 1)' },
@@ -73,11 +81,12 @@ const SortableSectionCard = ({
       >
         <div className="flex items-center gap-2.5">
           <button
+            ref={setActivatorNodeRef}
             type="button"
             {...listeners}
             {...attributes}
             onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
-            className={`flex h-7 w-7 items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-500 transition-all duration-150 ${
+            className={`flex h-7 w-7 touch-none items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-500 transition-all duration-150 ${
               isDragging ? 'cursor-grabbing' : 'cursor-grab'
             }`}
             aria-label="Drag to reorder"
