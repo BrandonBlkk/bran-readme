@@ -9,6 +9,11 @@ const prependUniqueTemplate = (templates, template) => [
   template,
   ...templates.filter((item) => item.id !== template.id),
 ]
+const replaceTemplateInList = (templates, template) => {
+  const hasTemplate = templates.some((item) => item.id === template.id)
+  if (!hasTemplate) return templates
+  return templates.map((item) => (item.id === template.id ? template : item))
+}
 
 export const useTemplateLibrary = () => {
   const [user, setUser] = useState(null)
@@ -102,6 +107,27 @@ export const useTemplateLibrary = () => {
     }
   }
 
+  const updateManagedTemplate = (template) => {
+    setOwnedTemplates((prev) => replaceTemplateInList(prev, template))
+    setCommunityTemplates((prev) => (
+      template.isPublic
+        ? replaceTemplateInList(prev, template)
+        : prev.filter((item) => item.id !== template.id)
+    ))
+  }
+
+  const removeManagedTemplate = (templateId) => {
+    const safeTemplateId = String(templateId)
+
+    setOwnedTemplates((prev) => prev.filter((item) => item.id !== safeTemplateId))
+    setCommunityTemplates((prev) => prev.filter((item) => item.id !== safeTemplateId))
+    setFavoriteIds((prev) => {
+      const next = new Set(prev)
+      next.delete(safeTemplateId)
+      return next
+    })
+  }
+
   const toggleFavorite = async (templateId) => {
     if (!user) {
       throw new Error('You must be signed in to favorite templates.')
@@ -133,6 +159,8 @@ export const useTemplateLibrary = () => {
     isLoading,
     loadError,
     addCreatedTemplate,
+    updateManagedTemplate,
+    removeManagedTemplate,
     toggleFavorite,
   }
 }

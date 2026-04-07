@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Heart, LayoutGrid, Plus, Sparkles } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -6,12 +6,13 @@ import AuthModal from '../components/auth/AuthModal'
 import Footer from '../components/Footer'
 import Sidebar from '../components/Sidebar'
 import CreateTemplateModal from '../components/template/CreateTemplateModal'
+import DeleteTemplateModal from '../components/template/DeleteTemplateModal'
 import TemplatePreviewModal from '../components/template/TemplatePreviewModal'
 import TemplateSection from '../components/template/TemplateSection'
-import { PENDING_TEMPLATE_KEY } from '../constants/templateFlow'
+import { PENDING_TEMPLATE_KEY, PENDING_TEMPLATE_UPDATE_KEY } from '../constants/templateFlow'
 import useTemplateLibrary from '../hooks/useTemplateLibrary'
 import { hasSupabaseConfig } from '../lib/supabaseClient'
-import { createSharedTemplate } from '../services/templateService'
+import { createSharedTemplate, deleteSharedTemplate, updateSharedTemplate } from '../services/templateService'
 import { extractGithubAccount } from '../utils/githubAccount'
 import { generateMarkdown } from '../utils/markdown'
 import { getPersistedBuilderSnapshot, sanitizeTags } from '../utils/templatePayload'
@@ -93,12 +94,17 @@ const getViewButtonClassName = (isActive, isDisabled = false) => `
   ${isDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}
 `
 
+const isTemplateOwner = (template, userId) =>
+  Boolean(template?.userId && userId && template.userId === userId)
+
 const Templates = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const highlightedTemplateId = searchParams.get('template')
   const shouldOpenCreateModal = searchParams.get('create') === '1'
+  const pendingTemplateUpdateId = searchParams.get('update')
   const currentYear = new Date().getFullYear()
+  const processedTemplateUpdateRef = useRef('')
 
   const {
     user,
@@ -111,15 +117,63 @@ const Templates = () => {
     isLoading,
     loadError,
     addCreatedTemplate,
+    updateManagedTemplate,
+    removeManagedTemplate,
     toggleFavorite,
   } = useTemplateLibrary()
 
   const [isAuthOpen, setIsAuthOpen] = useState(false)
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [createModalKey, setCreateModalKey] = useState(0)
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false)
+  const [isDeleteTemplateModalOpen, setIsDeleteTemplateModalOpen] = useState(false)
+  const [templateModalKey, setTemplateModalKey] = useState(0)
+  const [templateModalMode, setTemplateModalMode] = useState('create')
+  const [selectedTemplate, setSelectedTemplate] = useState(null)
+  const [templatePendingDelete, setTemplatePendingDelete] = useState(null)
   const [activeView, setActiveView] = useState('all')
   const [previewTemplate, setPreviewTemplate] = useState(null)
-  const [isSaving, setIsSaving] = useState(false)
+  const [isSubmittingTemplate, setIsSubmittingTemplate] = useState(false)
+  const [deletingTemplateId, setDeletingTemplateId] = useState(null)
+
+  const buildTemplatesRoute = (params = searchParams) => {
+    const nextParams = new URLSearchParams(params)
+    const query = nextParams.toString()
+    return query ? `/templates?${query}` : '/templates'
+  }
+
+  const clearTemplateModalQueryParams = () => {
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.delete('create')
+    nextParams.delete('update')
+    navigate(buildTemplatesRoute(nextParams), { replace: true })
+  }
+
+  const openTemplateModal = (mode, template = null) => {
+    setIsSubmittingTemplate(false)
+    setTemplateModalMode(mode)
+    setSelectedTemplate(template)
+    setTemplateModalKey((prev) => prev + 1)
+    setIsTemplateModalOpen(true)
+  }
+
+  const startTemplateUpdateFlow = (template) => {
+    if (!template || !user) return
+
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem(PENDING_TEMPLATE_KEY, JSON.stringify(template.payload))
+      window.sessionStorage.setItem(
+        PENDING_TEMPLATE_UPDATE_KEY,
+        JSON.stringify({ templateId: template.id }),
+      )
+    }
+
+    setIsTemplateModalOpen(false)
+    navigate('/')
+  }
+
+  const closeDeleteTemplateModal = () => {
+    setIsDeleteTemplateModalOpen(false)
+    setTemplatePendingDelete(null)
+  }
 
   const openCreateModal = () => {
     if (!hasSupabaseConfig) {
@@ -132,21 +186,61 @@ const Templates = () => {
       return
     }
 
-    setCreateModalKey((prev) => prev + 1)
-    setIsCreateOpen(true)
+    openTemplateModal('create')
   }
 
   useEffect(() => {
-    if (!shouldOpenCreateModal || isCreateOpen || !hasSupabaseConfig) return
+    if (!shouldOpenCreateModal || isTemplateModalOpen || !hasSupabaseConfig) return
 
     if (!user) {
       setIsAuthOpen(true)
       return
     }
 
-    setCreateModalKey((prev) => prev + 1)
-    setIsCreateOpen(true)
-  }, [isCreateOpen, shouldOpenCreateModal, user])
+    setTemplateModalMode('create')
+    setSelectedTemplate(null)
+    setTemplateModalKey((prev) => prev + 1)
+    setIsTemplateModalOpen(true)
+  }, [isTemplateModalOpen, shouldOpenCreateModal, user])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || pendingTemplateUpdateId) return
+
+    window.sessionStorage.removeItem(PENDING_TEMPLATE_UPDATE_KEY)
+    processedTemplateUpdateRef.current = ''
+  }, [pendingTemplateUpdateId])
+
+  useEffect(() => {
+    if (!pendingTemplateUpdateId || !hasSupabaseConfig || isLoading) return
+    if (processedTemplateUpdateRef.current === pendingTemplateUpdateId) return
+
+    if (!user) {
+      setIsAuthOpen(true)
+      return
+    }
+
+    const templateToUpdate = ownedTemplates.find((template) => template.id === pendingTemplateUpdateId)
+    if (!templateToUpdate) {
+      toast.error('Template not found or you do not have permission to update it.')
+      navigate('/templates', { replace: true })
+      return
+    }
+
+    processedTemplateUpdateRef.current = pendingTemplateUpdateId
+    setActiveView('mine')
+    setIsSubmittingTemplate(false)
+    setTemplateModalMode('edit')
+    setSelectedTemplate(templateToUpdate)
+    setTemplateModalKey((prev) => prev + 1)
+    setIsTemplateModalOpen(true)
+    toast.success('Template loaded from generator. Click Save Changes to finish the update.')
+  }, [
+    pendingTemplateUpdateId,
+    user,
+    isLoading,
+    ownedTemplates,
+    navigate,
+  ])
 
   const handleUseTemplate = (template) => {
     if (!template.payload?.sections?.length) {
@@ -157,6 +251,145 @@ const Templates = () => {
     setPreviewTemplate(null)
     window.sessionStorage.setItem(PENDING_TEMPLATE_KEY, JSON.stringify(template.payload))
     navigate('/')
+  }
+
+  const handleEditTemplate = (template) => {
+    if (!hasSupabaseConfig) {
+      toast.error('Supabase is not configured yet. Add env keys first.')
+      return
+    }
+
+    if (!user) {
+      setIsAuthOpen(true)
+      return
+    }
+
+    if (!isTemplateOwner(template, user.id)) {
+      toast.error('Only the creator can update this template.')
+      return
+    }
+
+    openTemplateModal('edit', template)
+  }
+
+  const handleUseCurrentTemplateForUpdate = () => {
+    if (!selectedTemplate || !user) return
+
+    if (!isTemplateOwner(selectedTemplate, user.id)) {
+      toast.error('Only the creator can update this template.')
+      return
+    }
+
+    startTemplateUpdateFlow(selectedTemplate)
+  }
+
+  const handleDeleteTemplate = (template) => {
+    if (!hasSupabaseConfig) {
+      toast.error('Supabase is not configured yet. Add env keys first.')
+      return
+    }
+
+    if (!user) {
+      setIsAuthOpen(true)
+      return
+    }
+
+    if (!isTemplateOwner(template, user.id)) {
+      toast.error('Only the creator can delete this template.')
+      return
+    }
+
+    setTemplatePendingDelete(template)
+    setIsDeleteTemplateModalOpen(true)
+  }
+
+  const handleConfirmDeleteTemplate = async () => {
+    if (!templatePendingDelete || !user) return
+
+    const template = templatePendingDelete
+
+    const removePreviewIfMatches = (currentTemplate) => (
+      currentTemplate?.id === template.id ? null : currentTemplate
+    )
+
+    try {
+      setDeletingTemplateId(template.id)
+      await deleteSharedTemplate({
+        templateId: template.id,
+        userId: user.id,
+      })
+
+      removeManagedTemplate(template.id)
+      setPreviewTemplate(removePreviewIfMatches)
+      setSelectedTemplate((currentTemplate) => (
+        currentTemplate?.id === template.id ? null : currentTemplate
+      ))
+      closeDeleteTemplateModal()
+      toast.success('Template deleted successfully.')
+    } catch (error) {
+      toast.error(error.message || 'Template deletion failed.')
+    } finally {
+      setDeletingTemplateId(null)
+    }
+  }
+
+  const handleUpdateTemplate = async (values) => {
+    if (!hasSupabaseConfig) {
+      toast.error('Supabase is not configured yet. Add env keys first.')
+      return
+    }
+
+    if (!user) {
+      setIsAuthOpen(true)
+      return
+    }
+
+    if (!selectedTemplate || !isTemplateOwner(selectedTemplate, user.id)) {
+      toast.error('Only the creator can update this template.')
+      return
+    }
+
+    const shouldApplyGeneratorSnapshot = pendingTemplateUpdateId === selectedTemplate.id
+    const snapshot = shouldApplyGeneratorSnapshot ? getPersistedBuilderSnapshot() : null
+
+    if (shouldApplyGeneratorSnapshot && !snapshot) {
+      toast.error('No builder snapshot found. Open Home, edit the README, then update again.')
+      return
+    }
+
+    try {
+      setIsSubmittingTemplate(true)
+
+      const updatedTemplate = await updateSharedTemplate({
+        templateId: selectedTemplate.id,
+        userId: user.id,
+        ...values,
+        ...(shouldApplyGeneratorSnapshot
+          ? {
+              payload: snapshot,
+              markdown: generateMarkdown(snapshot.sections || []),
+            }
+          : {}),
+      })
+
+      updateManagedTemplate(updatedTemplate)
+      setSelectedTemplate(updatedTemplate)
+      setPreviewTemplate((currentTemplate) => (
+        currentTemplate?.id === updatedTemplate.id
+          ? { ...currentTemplate, ...updatedTemplate }
+          : currentTemplate
+      ))
+      setIsTemplateModalOpen(false)
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.removeItem(PENDING_TEMPLATE_UPDATE_KEY)
+      }
+      toast.success('Template updated successfully.')
+      clearTemplateModalQueryParams()
+    } catch (error) {
+      toast.error(error.message || 'Template update failed.')
+    } finally {
+      setIsSubmittingTemplate(false)
+    }
   }
 
   const handleCreateTemplate = async (values) => {
@@ -178,7 +411,7 @@ const Templates = () => {
     }
 
     try {
-      setIsSaving(true)
+      setIsSubmittingTemplate(true)
 
       const markdown = generateMarkdown(snapshot.sections || [])
       const createdTemplate = await createSharedTemplate({
@@ -191,13 +424,22 @@ const Templates = () => {
 
       addCreatedTemplate(createdTemplate)
       setActiveView('mine')
-      setIsCreateOpen(false)
+      setIsTemplateModalOpen(false)
       toast.success('Template created successfully.')
     } catch (error) {
       toast.error(error.message || 'Template creation failed.')
     } finally {
-      setIsSaving(false)
+      setIsSubmittingTemplate(false)
     }
+  }
+
+  const handleSubmitTemplate = async (values) => {
+    if (templateModalMode === 'edit') {
+      await handleUpdateTemplate(values)
+      return
+    }
+
+    await handleCreateTemplate(values)
   }
 
   const handleToggleFavorite = async (templateId) => {
@@ -394,8 +636,12 @@ const Templates = () => {
                 highlightedTemplateId={highlightedTemplateId}
                 favoriteIds={favoriteIds}
                 onUseTemplate={handleUseTemplate}
+                onEditTemplate={handleEditTemplate}
+                onDeleteTemplate={handleDeleteTemplate}
                 onToggleFavorite={handleToggleFavorite}
                 onPreviewTemplate={setPreviewTemplate}
+                currentUserId={user?.id ?? null}
+                deletingTemplateId={deletingTemplateId}
                 emptyStateTitle={emptyStateTitle}
                 emptyStateDescription={emptyStateDescription}
                 emptyActionLabel={emptyActionLabel}
@@ -409,14 +655,37 @@ const Templates = () => {
       </div>
 
       <CreateTemplateModal
-        key={createModalKey}
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        onSubmit={handleCreateTemplate}
-        isSaving={isSaving}
+        key={templateModalKey}
+        isOpen={isTemplateModalOpen}
+        onClose={() => {
+          setIsSubmittingTemplate(false)
+          setIsTemplateModalOpen(false)
+          if (typeof window !== 'undefined') {
+            window.sessionStorage.removeItem(PENDING_TEMPLATE_UPDATE_KEY)
+          }
+          clearTemplateModalQueryParams()
+        }}
+        onSubmit={handleSubmitTemplate}
+        isSaving={isSubmittingTemplate}
         hasSnapshot={hasSnapshot}
         getTagList={getTagList}
         defaultAuthorName={getTemplateAuthorName(user)}
+        mode={templateModalMode}
+        onUseCurrentTemplate={handleUseCurrentTemplateForUpdate}
+        initialValues={selectedTemplate ? {
+          name: selectedTemplate.name,
+          description: selectedTemplate.description,
+          tags: selectedTemplate.tags,
+          authorName: selectedTemplate.authorName,
+        } : null}
+      />
+
+      <DeleteTemplateModal
+        isOpen={isDeleteTemplateModalOpen}
+        onClose={closeDeleteTemplateModal}
+        onConfirm={handleConfirmDeleteTemplate}
+        template={templatePendingDelete}
+        isDeleting={deletingTemplateId === templatePendingDelete?.id}
       />
 
       <TemplatePreviewModal

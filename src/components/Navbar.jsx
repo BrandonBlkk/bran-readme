@@ -7,7 +7,13 @@ import profileImage from '../assets/images/Profile.png'
 import ResetButton from './ResetButton'
 import { Link } from 'react-router-dom'
 
-const Navbar = ({ onReset, onCopy, onOpenProjectModal, onSaveTemplate }) => {
+const Navbar = ({
+  onReset,
+  onCopy,
+  onOpenProjectModal,
+  onSaveTemplate,
+  saveTemplateLabel = 'Save Template',
+}) => {
   const [isBeta, setIsBeta] = useState(true);
   const [isCopying, setIsCopying] = useState(false);
   const [isVisible, setIsVisible] = useState(true)
@@ -184,8 +190,8 @@ const Navbar = ({ onReset, onCopy, onOpenProjectModal, onSaveTemplate }) => {
               onClick={onSaveTemplate}
               className="flex flex-1 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-white px-2 py-2 text-xs font-medium text-[#0a0a0a] transition-opacity hover:opacity-90 duration-150 cursor-pointer sm:px-2.5 lg:flex-none lg:px-3 lg:py-1.5"
             >
-              <span className="sm:hidden">Save</span>
-              <span className="hidden sm:inline">Save Template</span>
+              <span className="sm:hidden">{saveTemplateLabel.startsWith('Update') ? 'Update' : 'Save'}</span>
+              <span className="hidden sm:inline">{saveTemplateLabel}</span>
             </button>
           ) : null}
 

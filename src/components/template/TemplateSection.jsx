@@ -46,8 +46,12 @@ const TemplateSection = ({
   highlightedTemplateId = null,
   favoriteIds = EMPTY_FAVORITES,
   onUseTemplate,
+  onEditTemplate,
+  onDeleteTemplate,
   onToggleFavorite,
   onPreviewTemplate,
+  currentUserId = null,
+  deletingTemplateId = null,
   emptyStateTitle = 'Nothing here yet',
   emptyStateDescription = '',
   emptyActionLabel = '',
@@ -92,8 +96,12 @@ const TemplateSection = ({
               isHighlighted={highlightedTemplateId === template.id}
               previewMarkdown={getPreviewMarkdown(template)}
               onUseTemplate={onUseTemplate}
+              onEditTemplate={onEditTemplate}
+              onDeleteTemplate={onDeleteTemplate}
               onToggleFavorite={onToggleFavorite}
               onPreviewTemplate={onPreviewTemplate}
+              canManage={Boolean(currentUserId && template.userId === currentUserId)}
+              isDeleting={deletingTemplateId === template.id}
             />
           ))}
         </div>
