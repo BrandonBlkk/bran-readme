@@ -11,6 +11,7 @@ const TEMPLATE_COLUMNS = `
   markdown,
   preview_theme,
   is_public,
+  user_id,
   author_name,
   created_at
 `
@@ -139,9 +140,25 @@ export const BUILTIN_TEMPLATES = [
 
 const buildMeta = (count) => `${count} section${count === 1 ? '' : 's'}`
 
-const hasMissingMarkdownColumnError = (error) => {
+const hasMissingColumnError = (error, columnName) => {
   const message = String(error?.message ?? '').toLowerCase()
-  return message.includes('column') && message.includes('markdown') && message.includes('does not exist')
+  return (
+    message.includes('column')
+    && message.includes(String(columnName ?? '').toLowerCase())
+    && message.includes('does not exist')
+  )
+}
+
+const createTemplateServiceError = (error, fallbackMessage) => {
+  if (hasMissingColumnError(error, 'markdown')) {
+    return new Error('Supabase schema is missing the markdown column. Update your templates table and retry.')
+  }
+
+  if (hasMissingColumnError(error, 'user_id')) {
+    return new Error('Supabase schema is missing the user_id column. Apply the template ownership SQL and retry.')
+  }
+
+  return new Error(error?.message || fallbackMessage)
 }
 
 const normalizeTemplate = (row, source = 'remote') => {
@@ -161,6 +178,7 @@ const normalizeTemplate = (row, source = 'remote') => {
     createdAt: row.created_at ?? null,
     authorName: row.author_name ? String(row.author_name) : 'Community',
     isPublic: row.is_public !== false,
+    userId: row.user_id ? String(row.user_id) : null,
     source,
   }
 }
@@ -190,13 +208,26 @@ export const fetchSharedTemplates = async () => {
     .order('created_at', { ascending: false })
 
   if (error) {
-    if (hasMissingMarkdownColumnError(error)) {
-      throw new Error('Supabase schema is missing the markdown column. Update your templates table and retry.')
-    }
-    throw new Error(error.message || 'Unable to load templates from Supabase.')
+    throw createTemplateServiceError(error, 'Unable to load templates from Supabase.')
   }
 
   return (data ?? []).map((row) => normalizeTemplate(row))
+}
+
+export const fetchUserTemplates = async (userId) => {
+  if (!hasSupabaseConfig || !supabase || !userId) return []
+
+  const { data, error } = await supabase
+    .from(TABLE_NAME)
+    .select(TEMPLATE_COLUMNS)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    throw createTemplateServiceError(error, 'Unable to load your templates.')
+  }
+
+  return (data ?? []).map((row) => normalizeTemplate(row, 'owned'))
 }
 
 export const createSharedTemplate = async ({
@@ -205,6 +236,7 @@ export const createSharedTemplate = async ({
   tags,
   payload,
   markdown,
+  userId,
   authorName,
   isPublic = true,
 }) => {
@@ -215,6 +247,11 @@ export const createSharedTemplate = async ({
   const safeName = String(name ?? '').trim()
   if (!safeName) {
     throw new Error('Template name is required.')
+  }
+
+  const safeUserId = String(userId ?? '').trim()
+  if (!safeUserId) {
+    throw new Error('You must be signed in to create templates.')
   }
 
   const normalizedPayload = normalizeTemplatePayload(payload)
@@ -229,6 +266,7 @@ export const createSharedTemplate = async ({
     sections: normalizedPayload.sections,
     markdown: String(markdown ?? '').trim() || null,
     preview_theme: normalizedPayload.previewTheme,
+    user_id: safeUserId,
     author_name: String(authorName ?? '').trim() || null,
     is_public: Boolean(isPublic),
   }
@@ -240,10 +278,7 @@ export const createSharedTemplate = async ({
     .single()
 
   if (error) {
-    if (hasMissingMarkdownColumnError(error)) {
-      throw new Error('Supabase schema is missing the markdown column. Update your templates table and retry.')
-    }
-    throw new Error(error.message || 'Unable to create template.')
+    throw createTemplateServiceError(error, 'Unable to create template.')
   }
 
   return normalizeTemplate(data)

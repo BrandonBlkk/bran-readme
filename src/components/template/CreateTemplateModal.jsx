@@ -11,11 +11,12 @@ const CreateTemplateModal = ({
   isSaving,
   hasSnapshot,
   getTagList,
+  defaultAuthorName = '',
 }) => {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [tagsText, setTagsText] = useState('')
-  const [authorName, setAuthorName] = useState('')
+  const [authorName, setAuthorName] = useState(defaultAuthorName)
   const [shouldRender, setShouldRender] = useState(isOpen)
   const [isVisible, setIsVisible] = useState(false)
 

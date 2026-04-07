@@ -2,13 +2,18 @@ import { useEffect, useMemo, useState } from 'react'
 import { hasSupabaseConfig } from '../lib/supabaseClient'
 import { getCurrentUser, onAuthStateChange } from '../services/authService'
 import { fetchFavoriteTemplateIds, toggleFavoriteTemplate } from '../services/templateFavoriteService'
-import { fetchSharedTemplates, getBuiltinTemplates } from '../services/templateService'
+import { fetchSharedTemplates, fetchUserTemplates, getBuiltinTemplates } from '../services/templateService'
 
 const createFavoriteSet = (values = []) => new Set(values.map((value) => String(value)))
+const prependUniqueTemplate = (templates, template) => [
+  template,
+  ...templates.filter((item) => item.id !== template.id),
+]
 
 export const useTemplateLibrary = () => {
   const [user, setUser] = useState(null)
   const [communityTemplates, setCommunityTemplates] = useState([])
+  const [ownedTemplates, setOwnedTemplates] = useState([])
   const [favoriteIds, setFavoriteIds] = useState(() => new Set())
   const [isLoading, setIsLoading] = useState(hasSupabaseConfig)
   const [loadError, setLoadError] = useState('')
@@ -42,19 +47,22 @@ export const useTemplateLibrary = () => {
         setIsLoading(true)
         setLoadError('')
 
-        const [remoteTemplates, nextFavoriteIds] = await Promise.all([
+        const [remoteTemplates, nextFavoriteIds, nextOwnedTemplates] = await Promise.all([
           fetchSharedTemplates(),
           nextUser ? fetchFavoriteTemplateIds(nextUser.id) : Promise.resolve([]),
+          nextUser ? fetchUserTemplates(nextUser.id) : Promise.resolve([]),
         ])
 
         if (!isMounted || requestId !== latestRequest) return
 
         setCommunityTemplates(remoteTemplates)
         setFavoriteIds(createFavoriteSet(nextFavoriteIds))
+        setOwnedTemplates(nextOwnedTemplates)
       } catch (error) {
         if (!isMounted || requestId !== latestRequest) return
 
         setCommunityTemplates([])
+        setOwnedTemplates([])
         setFavoriteIds(createFavoriteSet())
         setLoadError(error.message || 'Unable to load templates.')
       } finally {
@@ -86,8 +94,12 @@ export const useTemplateLibrary = () => {
     }
   }, [])
 
-  const addCommunityTemplate = (template) => {
-    setCommunityTemplates((prev) => [template, ...prev])
+  const addCreatedTemplate = (template) => {
+    setOwnedTemplates((prev) => prependUniqueTemplate(prev, template))
+
+    if (template.isPublic) {
+      setCommunityTemplates((prev) => prependUniqueTemplate(prev, template))
+    }
   }
 
   const toggleFavorite = async (templateId) => {
@@ -116,9 +128,11 @@ export const useTemplateLibrary = () => {
     favoriteIds,
     favoriteTemplates,
     favoriteCount: favoriteTemplates.length,
+    ownedTemplates,
+    ownedCount: ownedTemplates.length,
     isLoading,
     loadError,
-    addCommunityTemplate,
+    addCreatedTemplate,
     toggleFavorite,
   }
 }

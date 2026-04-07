@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Heart, LayoutGrid, Plus } from 'lucide-react'
+import { Heart, LayoutGrid, Plus, Sparkles } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import AuthModal from '../components/auth/AuthModal'
@@ -12,36 +12,9 @@ import { PENDING_TEMPLATE_KEY } from '../constants/templateFlow'
 import useTemplateLibrary from '../hooks/useTemplateLibrary'
 import { hasSupabaseConfig } from '../lib/supabaseClient'
 import { createSharedTemplate } from '../services/templateService'
+import { extractGithubAccount } from '../utils/githubAccount'
 import { generateMarkdown } from '../utils/markdown'
 import { getPersistedBuilderSnapshot, sanitizeTags } from '../utils/templatePayload'
-
-const copyToClipboard = async (value) => {
-  if (!navigator.clipboard?.writeText) {
-    throw new Error('Clipboard is not available in this browser.')
-  }
-
-  await navigator.clipboard.writeText(value)
-}
-
-const hasBlockedClipboardError = (error) => {
-  const name = String(error?.name ?? '').toLowerCase()
-  const message = String(error?.message ?? '').toLowerCase()
-
-  return (
-    name.includes('notallowed')
-    || message.includes('not allowed')
-    || message.includes('denied permission')
-    || message.includes('user agent or the platform')
-  )
-}
-
-const makeShareUrl = (templateId) => {
-  if (typeof window === 'undefined') return `/templates?template=${templateId}`
-
-  const url = new URL('/templates', window.location.origin)
-  url.searchParams.set('template', templateId)
-  return url.toString()
-}
 
 const getTagList = (text) =>
   sanitizeTags(
@@ -49,6 +22,20 @@ const getTagList = (text) =>
       .split(',')
       .map((item) => item.trim()),
   )
+
+const getTemplateAuthorName = (user) => {
+  const githubAccount = extractGithubAccount(user)
+  const metadata = user?.user_metadata ?? {}
+  const email = String(user?.email ?? '').trim()
+
+  return (
+    githubAccount?.displayName
+    || String(metadata.full_name ?? '').trim()
+    || String(metadata.name ?? '').trim()
+    || (email ? email.split('@')[0] : '')
+    || 'Community'
+  )
+}
 
 const getFavoriteEmptyState = (user) => {
   if (!hasSupabaseConfig) {
@@ -74,6 +61,38 @@ const getFavoriteEmptyState = (user) => {
   }
 }
 
+const getOwnedEmptyState = (user) => {
+  if (!hasSupabaseConfig) {
+    return {
+      title: 'Created templates need Supabase',
+      description: 'Add your Supabase env keys so templates can be linked to each signed-in user.',
+      actionLabel: '',
+    }
+  }
+
+  if (!user) {
+    return {
+      title: 'Sign in to view your templates',
+      description: 'Templates you create are connected to your account and will show up here.',
+      actionLabel: 'Sign In',
+    }
+  }
+
+  return {
+    title: 'No templates created yet',
+    description: 'Save your current builder snapshot as a template and it will appear here.',
+    actionLabel: 'Create Template',
+  }
+}
+
+const getViewButtonClassName = (isActive, isDisabled = false) => `
+  flex items-center gap-2 rounded-lg border px-4 py-2 text-xs font-semibold transition-all select-none
+  ${isActive
+    ? 'border-white bg-white text-zinc-900'
+    : 'border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-zinc-700 hover:text-zinc-100'}
+  ${isDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}
+`
+
 const Templates = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -87,29 +106,47 @@ const Templates = () => {
     favoriteIds,
     favoriteTemplates,
     favoriteCount,
+    ownedTemplates,
+    ownedCount,
     isLoading,
     loadError,
-    addCommunityTemplate,
+    addCreatedTemplate,
     toggleFavorite,
   } = useTemplateLibrary()
 
   const [isAuthOpen, setIsAuthOpen] = useState(false)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [createModalKey, setCreateModalKey] = useState(0)
-  const [isFavoriteView, setIsFavoriteView] = useState(false)
+  const [activeView, setActiveView] = useState('all')
   const [previewTemplate, setPreviewTemplate] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
 
   const openCreateModal = () => {
+    if (!hasSupabaseConfig) {
+      toast.error('Supabase is not configured yet. Add env keys first.')
+      return
+    }
+
+    if (!user) {
+      setIsAuthOpen(true)
+      return
+    }
+
     setCreateModalKey((prev) => prev + 1)
     setIsCreateOpen(true)
   }
 
   useEffect(() => {
-    if (!shouldOpenCreateModal) return
+    if (!shouldOpenCreateModal || isCreateOpen || !hasSupabaseConfig) return
+
+    if (!user) {
+      setIsAuthOpen(true)
+      return
+    }
+
     setCreateModalKey((prev) => prev + 1)
     setIsCreateOpen(true)
-  }, [shouldOpenCreateModal])
+  }, [isCreateOpen, shouldOpenCreateModal, user])
 
   const handleUseTemplate = (template) => {
     if (!template.payload?.sections?.length) {
@@ -120,15 +157,6 @@ const Templates = () => {
     setPreviewTemplate(null)
     window.sessionStorage.setItem(PENDING_TEMPLATE_KEY, JSON.stringify(template.payload))
     navigate('/')
-  }
-
-  const handleShareTemplate = async (templateId) => {
-    try {
-      await copyToClipboard(makeShareUrl(templateId))
-      toast.success('Template link copied.')
-    } catch (error) {
-      toast.error(error.message || 'Unable to copy template link.')
-    }
   }
 
   const handleCreateTemplate = async (values) => {
@@ -144,6 +172,11 @@ const Templates = () => {
       return
     }
 
+    if (!user) {
+      setIsAuthOpen(true)
+      return
+    }
+
     try {
       setIsSaving(true)
 
@@ -152,10 +185,12 @@ const Templates = () => {
         ...values,
         payload: snapshot,
         markdown,
+        userId: user.id,
         isPublic: true,
       })
 
-      addCommunityTemplate(createdTemplate)
+      addCreatedTemplate(createdTemplate)
+      setActiveView('mine')
       setIsCreateOpen(false)
       toast.success('Template created successfully.')
     } catch (error) {
@@ -184,7 +219,12 @@ const Templates = () => {
     }
   }
 
-  const handleFavoriteAction = () => {
+  const handleChangeView = (nextView) => {
+    if (nextView === 'all') {
+      setActiveView('all')
+      return
+    }
+
     if (!hasSupabaseConfig) return
 
     if (!user) {
@@ -192,32 +232,69 @@ const Templates = () => {
       return
     }
 
-    setIsFavoriteView((prev) => !prev)
+    setActiveView(nextView)
   }
 
   const favoriteEmptyState = getFavoriteEmptyState(user)
+  const ownedEmptyState = getOwnedEmptyState(user)
   const hasSnapshot = Boolean(getPersistedBuilderSnapshot())
-  const visibleTemplates = isFavoriteView ? favoriteTemplates : templates
+  const isFavoriteView = activeView === 'favorites'
+  const isOwnedView = activeView === 'mine'
+  const visibleTemplates = isFavoriteView
+    ? favoriteTemplates
+    : isOwnedView
+      ? ownedTemplates
+      : templates
   const sectionTitle = isFavoriteView
     ? (user ? 'Your Favorite Templates' : 'Favorite Templates')
-    : 'Template Library'
+    : isOwnedView
+      ? (user ? 'Your Created Templates' : 'My Templates')
+      : 'Template Library'
   const sectionDescription = isFavoriteView
     ? (
         user
           ? 'The templates you save with the heart button stay together here for quick reuse.'
           : 'Sign in to build a personal shortlist of templates on this page.'
       )
-    : 'Explore every available template, preview it, and add your go-to ones to favorites.'
-  const sectionIcon = isFavoriteView ? Heart : LayoutGrid
-  const sectionIconClassName = isFavoriteView ? 'text-rose-400' : 'text-blue-400'
-  const emptyStateTitle = isFavoriteView ? favoriteEmptyState.title : 'No templates available'
+    : isOwnedView
+      ? (
+          user
+            ? 'Every template you create is tied to your account and listed here for fast access.'
+            : 'Sign in to view the templates connected to your account.'
+        )
+      : 'Explore every available template, preview it, favorite the ones you want to keep, and save your own.'
+  const sectionIcon = isFavoriteView ? Heart : isOwnedView ? Sparkles : LayoutGrid
+  const sectionIconClassName = isFavoriteView
+    ? 'text-rose-400'
+    : isOwnedView
+      ? 'text-emerald-400'
+      : 'text-blue-400'
+  const emptyStateTitle = isFavoriteView
+    ? favoriteEmptyState.title
+    : isOwnedView
+      ? ownedEmptyState.title
+      : 'No templates available'
   const emptyStateDescription = isFavoriteView
     ? favoriteEmptyState.description
-    : 'Templates will appear here once the library loads.'
-  const emptyActionLabel = isFavoriteView ? favoriteEmptyState.actionLabel : ''
-  const emptyAction = isFavoriteView && !user && hasSupabaseConfig
-    ? () => setIsAuthOpen(true)
-    : undefined
+    : isOwnedView
+      ? ownedEmptyState.description
+      : 'Templates will appear here once the library loads.'
+  const emptyActionLabel = isFavoriteView
+    ? favoriteEmptyState.actionLabel
+    : isOwnedView
+      ? ownedEmptyState.actionLabel
+      : ''
+  const emptyAction = isFavoriteView
+    ? (hasSupabaseConfig && !user ? () => setIsAuthOpen(true) : undefined)
+    : isOwnedView
+      ? (
+          !hasSupabaseConfig
+            ? undefined
+            : user
+              ? openCreateModal
+              : () => setIsAuthOpen(true)
+        )
+      : undefined
 
   return (
     <>
@@ -238,6 +315,9 @@ const Templates = () => {
                   <span className="rounded-full border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-zinc-400">
                     {favoriteCount} favorites
                   </span>
+                  <span className="rounded-full border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-zinc-400">
+                    {ownedCount} created
+                  </span>
                 </div>
 
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
@@ -246,20 +326,37 @@ const Templates = () => {
                       Prebuilt README Templates
                     </h1>
                     <p className="mt-3 max-w-2xl text-xs leading-relaxed text-zinc-400 sm:text-sm">
-                      Browse built-in and community templates, favorite the ones you want to keep,
-                      then load any of them straight into the builder.
+                      Browse built-in and community templates, keep favorites together, and revisit
+                      the templates created from your own account whenever you need them.
                     </p>
                   </div>
 
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={handleFavoriteAction}
-                      disabled={!hasSupabaseConfig}
-                      className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-xs font-semibold text-zinc-900 transition-all disabled:cursor-not-allowed disabled:opacity-60 select-none cursor-pointer"
+                      onClick={() => handleChangeView('all')}
+                      className={getViewButtonClassName(activeView === 'all')}
                     >
-                      {(isFavoriteView ? <LayoutGrid className='text-blue-500' size={14} /> : <Heart className='text-rose-500' size={14} />)}
-                      {user ? (isFavoriteView ? 'View All Templates' : 'View Favorites') : 'Sign In for Favorites'}
+                      <LayoutGrid size={14} />
+                      All Templates
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleChangeView('favorites')}
+                      disabled={!hasSupabaseConfig}
+                      className={getViewButtonClassName(activeView === 'favorites', !hasSupabaseConfig)}
+                    >
+                      <Heart size={14} className={activeView === 'favorites' ? '' : 'text-rose-500'} />
+                      Favorites
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleChangeView('mine')}
+                      disabled={!hasSupabaseConfig}
+                      className={getViewButtonClassName(activeView === 'mine', !hasSupabaseConfig)}
+                    >
+                      <Sparkles size={14} className={activeView === 'mine' ? '' : 'text-emerald-500'} />
+                      My Templates
                     </button>
                     <button
                       type="button"
@@ -267,7 +364,7 @@ const Templates = () => {
                       className="flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-rose-500 select-none cursor-pointer"
                     >
                       <Plus size={14} />
-                      Create Template
+                      {user ? 'Create Template' : 'Sign In to Create'}
                     </button>
                   </div>
                 </div>
@@ -275,7 +372,7 @@ const Templates = () => {
 
               {!hasSupabaseConfig && (
                 <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-100">
-                  Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to enable shared templates and user favorites.
+                  Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to enable shared templates, favorites, and user-owned templates.
                 </div>
               )}
 
@@ -286,7 +383,7 @@ const Templates = () => {
               )}
 
               <TemplateSection
-                id={isFavoriteView ? 'favorite-templates' : 'template-library'}
+                id={isFavoriteView ? 'favorite-templates' : isOwnedView ? 'my-templates' : 'template-library'}
                 title={sectionTitle}
                 description={sectionDescription}
                 icon={sectionIcon}
@@ -319,6 +416,7 @@ const Templates = () => {
         isSaving={isSaving}
         hasSnapshot={hasSnapshot}
         getTagList={getTagList}
+        defaultAuthorName={getTemplateAuthorName(user)}
       />
 
       <TemplatePreviewModal
