@@ -24,7 +24,7 @@ import SortableSectionCard from './readme-builder/SortableSectionCard'
 import DragPreview from './readme-builder/DragPreview'
 import EmptyState from './readme-builder/EmptyState'
 import GithubModeToggle from './readme-builder/GithubModeToggle'
-import { PENDING_TEMPLATE_KEY } from '../constants/templateFlow'
+import { PENDING_TEMPLATE_KEY, PENDING_TEMPLATE_UPDATE_KEY } from '../constants/templateFlow'
 import { normalizeTemplatePayload } from '../utils/templatePayload'
 import { DEFAULT_PROFILE, getResolvedProfile, useProfileStore } from '../stores/profileStore'
 import {
@@ -444,6 +444,19 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false)
   const [focusedSectionRequest, setFocusedSectionRequest] = useState(null)
+  const [pendingTemplateUpdateId] = useState(() => {
+    if (typeof window === 'undefined') return ''
+
+    const raw = window.sessionStorage.getItem(PENDING_TEMPLATE_UPDATE_KEY)
+    if (!raw) return ''
+
+    try {
+      const parsed = JSON.parse(raw)
+      return String(parsed?.templateId ?? '').trim()
+    } catch {
+      return ''
+    }
+  })
   const sectionCardRefs = useRef(new Map())
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -982,6 +995,15 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
   }
 
   const handleSaveTemplate = () => {
+    if (pendingTemplateUpdateId) {
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.removeItem(PENDING_TEMPLATE_UPDATE_KEY)
+      }
+
+      navigate(`/templates?update=${encodeURIComponent(pendingTemplateUpdateId)}`)
+      return
+    }
+
     navigate('/templates?create=1')
   }
 
@@ -1012,6 +1034,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
         onCopy={handleCopyMarkdown}
         onOpenProjectModal={onOpenProjectModal}
         onSaveTemplate={handleSaveTemplate}
+        saveTemplateLabel={pendingTemplateUpdateId ? 'Update Template' : 'Save Template'}
       />
 
       <div
