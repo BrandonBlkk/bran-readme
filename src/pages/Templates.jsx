@@ -105,6 +105,7 @@ const Templates = () => {
   const pendingTemplateUpdateId = searchParams.get('update')
   const currentYear = new Date().getFullYear()
   const processedTemplateUpdateRef = useRef('')
+  const processedCreateModalRef = useRef(false)
 
   const {
     user,
@@ -190,18 +191,22 @@ const Templates = () => {
   }
 
   useEffect(() => {
-    if (!shouldOpenCreateModal || isTemplateModalOpen || !hasSupabaseConfig) return
+    if (!shouldOpenCreateModal) {
+      processedCreateModalRef.current = false
+      return
+    }
+
+    if (isTemplateModalOpen || !hasSupabaseConfig || isLoading || processedCreateModalRef.current) return
 
     if (!user) {
       setIsAuthOpen(true)
       return
     }
 
-    setTemplateModalMode('create')
-    setSelectedTemplate(null)
-    setTemplateModalKey((prev) => prev + 1)
-    setIsTemplateModalOpen(true)
-  }, [isTemplateModalOpen, shouldOpenCreateModal, user])
+    processedCreateModalRef.current = true
+    setIsAuthOpen(false)
+    openTemplateModal('create')
+  }, [isLoading, isTemplateModalOpen, shouldOpenCreateModal, user])
 
   useEffect(() => {
     if (typeof window === 'undefined' || pendingTemplateUpdateId) return
