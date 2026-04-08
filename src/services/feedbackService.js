@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabaseClient'
 export const submitFeedback = async ({ rating, comment, pageUrl = window.location.pathname }) => {
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('feedback')
     .insert([
       {
@@ -14,13 +14,11 @@ export const submitFeedback = async ({ rating, comment, pageUrl = window.locatio
         page_url: pageUrl,
       },
     ])
-    .select()
-    .single()
 
   if (error) {
     console.error('Feedback Error:', error)
     throw new Error(error.message || 'Unable to submit feedback.')
   }
 
-  return data
+  return true
 }
