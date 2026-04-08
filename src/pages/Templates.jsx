@@ -419,7 +419,6 @@ const Templates = () => {
         payload: snapshot,
         markdown,
         userId: user.id,
-        isPublic: true,
       })
 
       addCreatedTemplate(createdTemplate)
@@ -677,6 +676,7 @@ const Templates = () => {
           description: selectedTemplate.description,
           tags: selectedTemplate.tags,
           authorName: selectedTemplate.authorName,
+          isPublic: selectedTemplate.isPublic,
         } : null}
       />
 

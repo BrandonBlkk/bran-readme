@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { PencilLine, Plus, Save, X } from 'lucide-react'
 import Spinner from '../Spinner'
+import Toggle from '../Toggle'
 
 const ANIMATION_DURATION_MS = 200
 const getSourceButtonClassName = (isDisabled = false) => `
@@ -29,6 +30,7 @@ const CreateTemplateModal = ({
   const [authorName, setAuthorName] = useState(
     initialValues?.authorName ?? defaultAuthorName,
   )
+  const [isPublic, setIsPublic] = useState(initialValues?.isPublic !== false)
   const [shouldRender, setShouldRender] = useState(isOpen)
   const [isVisible, setIsVisible] = useState(false)
 
@@ -76,6 +78,7 @@ const CreateTemplateModal = ({
       description,
       authorName,
       tags: getTagList(tagsText),
+      isPublic,
     })
   }
 
@@ -182,6 +185,13 @@ const CreateTemplateModal = ({
                   />
                 </label>
               </div>
+
+              <Toggle
+                title="Public template"
+                description="When enabled, this template appears in the community library. Turn it off to keep the template private in your My Templates list only."
+                checked={isPublic}
+                onChange={setIsPublic}
+              />
 
               {isEditMode && (
                 <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4">

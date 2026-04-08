@@ -312,6 +312,7 @@ export const updateSharedTemplate = async ({
   description,
   tags,
   authorName,
+  isPublic,
   markdown,
   payload,
 }) => {
@@ -328,6 +329,10 @@ export const updateSharedTemplate = async ({
     tags,
     authorName,
   })
+
+  if (typeof isPublic !== 'undefined') {
+    row.is_public = Boolean(isPublic)
+  }
 
   if (typeof markdown !== 'undefined') {
     row.markdown = String(markdown ?? '').trim() || null

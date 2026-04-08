@@ -111,7 +111,11 @@ export const useTemplateLibrary = () => {
     setOwnedTemplates((prev) => replaceTemplateInList(prev, template))
     setCommunityTemplates((prev) => (
       template.isPublic
-        ? replaceTemplateInList(prev, template)
+        ? (
+            prev.some((item) => item.id === template.id)
+              ? replaceTemplateInList(prev, template)
+              : prependUniqueTemplate(prev, template)
+          )
         : prev.filter((item) => item.id !== template.id)
     ))
   }

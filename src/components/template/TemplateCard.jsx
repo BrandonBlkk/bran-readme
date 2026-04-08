@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { Heart, Eye, Sparkles, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { Heart, Eye, Sparkles, MoreVertical, Pencil, Trash2, Lock } from 'lucide-react'
 import TemplateMockup from './TemplateMockup'
 
 const TemplateCard = ({ 
     template, 
-    isFavorite, 
+    isFavorite,
     isHighlighted, 
     previewMarkdown, 
     onUseTemplate, 
@@ -59,6 +59,7 @@ const TemplateCard = ({
                         {template.authorName} | {template.meta}
                     </p>
                 </div>
+
                 <div className='flex items-center gap-2'>
                     <button
                         type="button"
@@ -91,7 +92,7 @@ const TemplateCard = ({
                             </button>
 
                             {showMenu && (
-                                <div className="absolute right-0 top-full z-10 mt-2 w-32 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 shadow-xl">
+                                <div className="absolute right-0 top-full z-10 mt-2 w-32 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 shadow-xl select-none">
                                     <button
                                         type="button"
                                         onClick={() => {
@@ -126,6 +127,12 @@ const TemplateCard = ({
             </div>
 
             <div className="mt-4 flex flex-wrap gap-2 select-none">
+                {template.isPublic === false && (
+                    <span className={`${pillBase} gap-1.5 border-amber-500/30 bg-amber-500/10 text-amber-300`}>
+                        <Lock size={10} />
+                        Private
+                    </span>
+                )}
                 {template.tags?.map((tag) => (
                     <span key={tag} className={`${pillBase} border-zinc-800 bg-zinc-900 text-zinc-500`}>
                         {tag}
