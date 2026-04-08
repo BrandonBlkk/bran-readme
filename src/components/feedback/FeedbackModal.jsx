@@ -1,14 +1,47 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { Check, Star, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { submitFeedback } from '../../services/feedbackService'
 import { toast } from 'sonner'
+import Spinner from '../Spinner'
+
+const MotionDiv = motion.div
 
 const FeedbackModal = ({ isOpen, onClose }) => {
   const [rating, setRating] = useState(0)
   const [comment, setComment] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
+  const closeTimeoutRef = useRef(null)
+
+  const resetFeedbackState = () => {
+    setRating(0)
+    setComment('')
+    setIsSubmitting(false)
+    setIsSuccess(false)
+  }
+
+  const handleClose = () => {
+    if (closeTimeoutRef.current) {
+      window.clearTimeout(closeTimeoutRef.current)
+      closeTimeoutRef.current = null
+    }
+
+    resetFeedbackState()
+    onClose()
+  }
+
+  useEffect(() => {
+    if (!isOpen) {
+      resetFeedbackState()
+    }
+  }, [isOpen])
+
+  useEffect(() => () => {
+    if (closeTimeoutRef.current) {
+      window.clearTimeout(closeTimeoutRef.current)
+    }
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -21,11 +54,9 @@ const FeedbackModal = ({ isOpen, onClose }) => {
     try {
       await submitFeedback({ rating, comment })
       setIsSuccess(true)
-      setTimeout(() => {
-        setIsSuccess(false)
-        setRating(0)
-        setComment('')
-        onClose()
+      closeTimeoutRef.current = window.setTimeout(() => {
+        closeTimeoutRef.current = null
+        handleClose()
       }, 2000)
     } catch (error) {
       toast.error('Submission failed: ' + error.message)
@@ -37,17 +68,17 @@ const FeedbackModal = ({ isOpen, onClose }) => {
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div
+        <MotionDiv
           className="fixed inset-0 z-70 flex items-center justify-center px-4 backdrop-blur-md"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
-          <motion.div
+          <MotionDiv
             className="absolute inset-0 bg-black/60"
-            onClick={onClose}
+            onClick={handleClose}
           />
-          <motion.div
+          <MotionDiv
             className="relative w-full max-w-sm rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl"
             initial={{ opacity: 0, scale: 0.95, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -55,7 +86,7 @@ const FeedbackModal = ({ isOpen, onClose }) => {
             transition={{ type: 'spring', damping: 20, stiffness: 300 }}
           >
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="absolute top-4 right-4 rounded-full p-2 text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200 cursor-pointer"
             >
               <X size={18} />
@@ -106,14 +137,15 @@ const FeedbackModal = ({ isOpen, onClose }) => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="mt-6 w-full rounded-xl bg-zinc-100 px-5 py-3 text-sm font-semibold text-zinc-950 transition-opacity hover:opacity-90 disabled:opacity-50 select-none cursor-pointer"
+                  className="mt-6 flex w-full items-center justify-center gap-3 rounded-xl bg-zinc-100 px-5 py-3 text-sm font-semibold text-zinc-950 transition-opacity hover:opacity-90 disabled:opacity-50 select-none cursor-pointer"
                 >
+                  {isSubmitting ? <Spinner color="border-zinc-900" /> : null}
                   {isSubmitting ? 'Sending...' : 'Submit Feedback'}
                 </button>
               </form>
             )}
-          </motion.div>
-        </motion.div>
+          </MotionDiv>
+        </MotionDiv>
       )}
     </AnimatePresence>
   )
