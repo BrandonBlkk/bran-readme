@@ -14,6 +14,35 @@ const replaceTemplateInList = (templates, template) => {
   if (!hasTemplate) return templates
   return templates.map((item) => (item.id === template.id ? template : item))
 }
+let sharedTemplatesCache = null
+let sharedTemplatesPromise = null
+
+const fetchSharedTemplatesOnce = async () => {
+  if (!hasSupabaseConfig) return []
+
+  if (sharedTemplatesCache !== null) {
+    return sharedTemplatesCache
+  }
+
+  if (!sharedTemplatesPromise) {
+    sharedTemplatesPromise = fetchSharedTemplates()
+      .then((templates) => {
+        sharedTemplatesCache = templates
+        return templates
+      })
+      .finally(() => {
+        sharedTemplatesPromise = null
+      })
+  }
+
+  return sharedTemplatesPromise
+}
+
+const updateSharedTemplatesCache = (updater, fallback = []) => {
+  const nextTemplates = updater(sharedTemplatesCache ?? fallback)
+  sharedTemplatesCache = nextTemplates
+  return nextTemplates
+}
 
 export const useTemplateLibrary = () => {
   const [user, setUser] = useState(null)
@@ -53,7 +82,7 @@ export const useTemplateLibrary = () => {
         setLoadError('')
 
         const [remoteTemplates, nextFavoriteIds, nextOwnedTemplates] = await Promise.all([
-          fetchSharedTemplates(),
+          fetchSharedTemplatesOnce(),
           nextUser ? fetchFavoriteTemplateIds(nextUser.id) : Promise.resolve([]),
           nextUser ? fetchUserTemplates(nextUser.id) : Promise.resolve([]),
         ])
@@ -103,20 +132,26 @@ export const useTemplateLibrary = () => {
     setOwnedTemplates((prev) => prependUniqueTemplate(prev, template))
 
     if (template.isPublic) {
-      setCommunityTemplates((prev) => prependUniqueTemplate(prev, template))
+      setCommunityTemplates((prev) => updateSharedTemplatesCache(
+        (current) => prependUniqueTemplate(current, template),
+        prev,
+      ))
     }
   }
 
   const updateManagedTemplate = (template) => {
     setOwnedTemplates((prev) => replaceTemplateInList(prev, template))
-    setCommunityTemplates((prev) => (
-      template.isPublic
-        ? (
-            prev.some((item) => item.id === template.id)
-              ? replaceTemplateInList(prev, template)
-              : prependUniqueTemplate(prev, template)
-          )
-        : prev.filter((item) => item.id !== template.id)
+    setCommunityTemplates((prev) => updateSharedTemplatesCache(
+      (current) => (
+        template.isPublic
+          ? (
+              current.some((item) => item.id === template.id)
+                ? replaceTemplateInList(current, template)
+                : prependUniqueTemplate(current, template)
+            )
+          : current.filter((item) => item.id !== template.id)
+      ),
+      prev,
     ))
   }
 
@@ -124,7 +159,10 @@ export const useTemplateLibrary = () => {
     const safeTemplateId = String(templateId)
 
     setOwnedTemplates((prev) => prev.filter((item) => item.id !== safeTemplateId))
-    setCommunityTemplates((prev) => prev.filter((item) => item.id !== safeTemplateId))
+    setCommunityTemplates((prev) => updateSharedTemplatesCache(
+      (current) => current.filter((item) => item.id !== safeTemplateId),
+      prev,
+    ))
     setFavoriteIds((prev) => {
       const next = new Set(prev)
       next.delete(safeTemplateId)
