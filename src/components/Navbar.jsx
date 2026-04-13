@@ -6,6 +6,7 @@ import SignoutConfirmModal from './auth/SignoutConfirmModal'
 import profileImage from '../assets/images/Profile.png'
 import ResetButton from './ResetButton'
 import { Link } from 'react-router-dom'
+import packageJson from '../../package.json'
 
 const Navbar = ({
   onReset,
@@ -14,7 +15,7 @@ const Navbar = ({
   onSaveTemplate,
   saveTemplateLabel = 'Save Template',
 }) => {
-  const [isBeta, setIsBeta] = useState(true);
+  const [isBeta, setIsBeta] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
   const [isVisible, setIsVisible] = useState(true)
   const [navHeight, setNavHeight] = useState(0);
@@ -117,6 +118,8 @@ const Navbar = ({
     setTimeout(() => setIsCopying(false), 500);
   };
 
+  const version = packageJson.version || '0.1.0';
+
   return (
     <>
       <header
@@ -156,7 +159,7 @@ const Navbar = ({
             </span>
           ) : (
             <span className="rounded-full border border-zinc-600 bg-zinc-900 px-2 py-0.5 text-[11px] font-medium text-zinc-400 select-none">
-              v1.0
+              v{version}
             </span>
           )}
         </div>
