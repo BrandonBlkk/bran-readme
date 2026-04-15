@@ -673,11 +673,394 @@ const TextEditor = ({ section, updateSection }) => {
   )
 }
 
+const StreakEditor = ({ section, updateSection }) => {
+  const c = section.content ?? {}
+  return (
+    <div className="grid gap-4">
+      <Field label="GitHub Username">
+        <input
+          className={inputClass}
+          value={c.username ?? ''}
+          onChange={(e) => updateSection(section.id, { username: e.target.value })}
+          placeholder="BrandonBlkk"
+        />
+      </Field>
+      <Field label="Theme">
+        <select
+          className={inputClass}
+          value={c.theme ?? 'dark'}
+          onChange={(e) => updateSection(section.id, { theme: e.target.value })}
+        >
+          {['dark', 'radical', 'tokyonight', 'onedark', 'cobalt', 'highcontrast', 'dracula', 'monokai', 'vue', 'vue-dark', 'shades-of-purple', 'nightowl', 'buefy', 'blue-green', 'algolia', 'great-gatsby', 'darcula', 'bear', 'gruvbox_duo', 'material-palenight', 'neon', 'ads-juicy-fresh', 'soft-green', 'default'].map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+      </Field>
+      <Toggle label="Hide Border" checked={Boolean(c.hideBorder)} onChange={(v) => updateSection(section.id, { hideBorder: v })} />
+      <div className="grid grid-cols-2 gap-3">
+        <ColorField label="Background" value={c.bgColor ?? '#171f2b'} onChange={(v) => updateSection(section.id, { bgColor: v })} />
+        <ColorField label="Stroke" value={c.strokeColor ?? '#58a6ff'} onChange={(v) => updateSection(section.id, { strokeColor: v })} />
+        <ColorField label="Ring" value={c.ringColor ?? '#58a6ff'} onChange={(v) => updateSection(section.id, { ringColor: v })} />
+        <ColorField label="Fire" value={c.fireColor ?? '#fbbf24'} onChange={(v) => updateSection(section.id, { fireColor: v })} />
+        <ColorField label="Current Streak" value={c.currStreakColor ?? '#58a6ff'} onChange={(v) => updateSection(section.id, { currStreakColor: v })} />
+        <ColorField label="Side Numbers" value={c.sideNumColor ?? '#c9d1d9'} onChange={(v) => updateSection(section.id, { sideNumColor: v })} />
+        <ColorField label="Side Labels" value={c.sideLabelsColor ?? '#8b949e'} onChange={(v) => updateSection(section.id, { sideLabelsColor: v })} />
+        <ColorField label="Dates" value={c.dateColor ?? '#8b949e'} onChange={(v) => updateSection(section.id, { dateColor: v })} />
+      </div>
+      <RangeField label="Border Radius" min={0} max={24} value={c.borderRadius ?? 8} onChange={(v) => updateSection(section.id, { borderRadius: v })} />
+    </div>
+  )
+}
+
+const ActivityEditor = ({ section, updateSection }) => {
+  const c = section.content ?? {}
+  return (
+    <div className="grid gap-4">
+      <Field label="GitHub Username">
+        <input
+          className={inputClass}
+          value={c.username ?? ''}
+          onChange={(e) => updateSection(section.id, { username: e.target.value })}
+          placeholder="BrandonBlkk"
+        />
+      </Field>
+      <Field label="Theme">
+        <select
+          className={inputClass}
+          value={c.theme ?? 'github-compact'}
+          onChange={(e) => updateSection(section.id, { theme: e.target.value })}
+        >
+          {['github-compact', 'github', 'github-dark', 'github-dark-dimmed', 'react', 'react-dark', 'rogue', 'merko', 'vue', 'tokyo-night', 'high-contrast', 'dracula', 'xcode', 'coral'].map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+      </Field>
+      <div className="grid grid-cols-2 gap-2">
+        <Toggle label="Hide Border" checked={Boolean(c.hideBorder)} onChange={(v) => updateSection(section.id, { hideBorder: v })} />
+        <Toggle label="Hide Grid" checked={Boolean(c.hideGrid)} onChange={(v) => updateSection(section.id, { hideGrid: v })} />
+        <Toggle label="Show Area" checked={Boolean(c.area)} onChange={(v) => updateSection(section.id, { area: v })} />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <ColorField label="Background" value={c.bgColor ?? '#171f2b'} onChange={(v) => updateSection(section.id, { bgColor: v })} />
+        <ColorField label="Line Color" value={c.lineColor ?? '#58a6ff'} onChange={(v) => updateSection(section.id, { lineColor: v })} />
+        <ColorField label="Point Color" value={c.pointColor ?? '#58a6ff'} onChange={(v) => updateSection(section.id, { pointColor: v })} />
+        <ColorField label="Area Color" value={c.areaColor ?? '#58a6ff'} onChange={(v) => updateSection(section.id, { areaColor: v })} />
+      </div>
+      <RangeField label="Border Radius" min={0} max={24} value={c.radius ?? 8} onChange={(v) => updateSection(section.id, { radius: v })} />
+    </div>
+  )
+}
+
+const BADGE_TYPES = [
+  { type: 'profile-views', label: 'Profile Views' },
+  { type: 'followers', label: 'Followers' },
+  { type: 'stars', label: 'Stars' },
+  { type: 'custom', label: 'Custom Badge' },
+]
+
+const BADGE_STYLES = ['for-the-badge', 'flat', 'flat-square', 'plastic', 'social']
+
+const BadgesEditor = ({ section, updateSection }) => {
+  const c = section.content ?? {}
+  const items = c.items ?? []
+  const [selectedType, setSelectedType] = useState('profile-views')
+  
+  const addBadge = () => {
+    const newBadge = {
+      type: selectedType,
+      label: BADGE_TYPES.find(b => b.type === selectedType)?.label || 'Badge',
+      color: '58a6ff',
+      style: 'for-the-badge',
+      message: selectedType === 'custom' ? 'Value' : '',
+    }
+    updateSection(section.id, { items: [...items, newBadge] })
+  }
+  
+  const removeBadge = (index) => {
+    updateSection(section.id, { items: items.filter((_, i) => i !== index) })
+  }
+  
+  const updateBadge = (index, field, value) => {
+    const next = items.map((badge, i) => i === index ? { ...badge, [field]: value } : badge)
+    updateSection(section.id, { items: next })
+  }
+  
+  return (
+    <div className="grid gap-4">
+      <Field label="GitHub Username">
+        <input
+          className={inputClass}
+          value={c.username ?? ''}
+          onChange={(e) => updateSection(section.id, { username: e.target.value })}
+          placeholder="BrandonBlkk"
+        />
+      </Field>
+      <Field label="Alignment">
+        <select
+          className={inputClass}
+          value={c.align ?? 'left'}
+          onChange={(e) => updateSection(section.id, { align: e.target.value })}
+        >
+          {['left', 'center', 'right'].map((align) => (
+            <option key={align} value={align}>{align}</option>
+          ))}
+        </select>
+      </Field>
+      <div className="flex gap-2">
+        <Field label="Add Badge">
+          <select
+            className={inputClass}
+            value={selectedType}
+            onChange={(e) => setSelectedType(e.target.value)}
+          >
+            {BADGE_TYPES.map((b) => (
+              <option key={b.type} value={b.type}>{b.label}</option>
+            ))}
+          </select>
+        </Field>
+        <button
+          type="button"
+          onClick={addBadge}
+          className="mt-5.5 h-9 rounded-lg border border-zinc-800 bg-zinc-950 px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-400 transition-all duration-150 hover:border-blue-500 hover:text-blue-400 cursor-pointer select-none"
+        >
+          Add
+        </button>
+      </div>
+      <div className="grid gap-2.5">
+        {items.map((badge, index) => (
+          <div key={index} className="grid gap-2 rounded-lg border border-zinc-800 bg-zinc-950 p-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-400">{badge.type}</span>
+              <button
+                type="button"
+                onClick={() => removeBadge(index)}
+                className="flex h-6 w-6 items-center justify-center rounded-md border border-zinc-800 text-zinc-500 transition-all duration-150 hover:border-red-500 hover:text-red-500 cursor-pointer"
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
+            <input
+              className={inputClass}
+              value={badge.label ?? ''}
+              onChange={(e) => updateBadge(index, 'label', e.target.value)}
+              placeholder="Label"
+            />
+            {badge.type === 'custom' && (
+              <input
+                className={inputClass}
+                value={badge.message ?? ''}
+                onChange={(e) => updateBadge(index, 'message', e.target.value)}
+                placeholder="Message/Value"
+              />
+            )}
+            <div className="grid grid-cols-2 gap-2">
+              <ColorField label="Color" value={`#${badge.color ?? '58a6ff'}`} onChange={(v) => updateBadge(index, 'color', v.replace('#', ''))} />
+              <Field label="Style">
+                <select
+                  className={inputClass}
+                  value={badge.style ?? 'for-the-badge'}
+                  onChange={(e) => updateBadge(index, 'style', e.target.value)}
+                >
+                  {BADGE_STYLES.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+const ReposEditor = ({ section, updateSection }) => {
+  const c = section.content ?? {}
+  const repos = c.repos ?? []
+  const [newRepo, setNewRepo] = useState('')
+  
+  const addRepo = () => {
+    if (!newRepo.trim()) return
+    updateSection(section.id, { repos: [...repos, newRepo.trim()] })
+    setNewRepo('')
+  }
+  
+  const removeRepo = (index) => {
+    updateSection(section.id, { repos: repos.filter((_, i) => i !== index) })
+  }
+  
+  return (
+    <div className="grid gap-4">
+      <Field label="GitHub Username">
+        <input
+          className={inputClass}
+          value={c.username ?? ''}
+          onChange={(e) => updateSection(section.id, { username: e.target.value })}
+          placeholder="BrandonBlkk"
+        />
+      </Field>
+      <Field label="Theme">
+        <select
+          className={inputClass}
+          value={c.theme ?? 'dark'}
+          onChange={(e) => updateSection(section.id, { theme: e.target.value })}
+        >
+          {['dark', 'transparent', 'tokyonight', 'radical', 'onedark', 'cobalt', 'nightowl', 'dracula'].map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+      </Field>
+      <Toggle label="Hide Border" checked={c.hideBorder !== false} onChange={(v) => updateSection(section.id, { hideBorder: v })} />
+      <Field label="Alignment">
+        <select
+          className={inputClass}
+          value={c.align ?? 'center'}
+          onChange={(e) => updateSection(section.id, { align: e.target.value })}
+        >
+          {['left', 'center', 'right'].map((align) => (
+            <option key={align} value={align}>{align}</option>
+          ))}
+        </select>
+      </Field>
+      <div className="flex gap-2">
+        <Field label="Add Repository">
+          <input
+            className={inputClass}
+            value={newRepo}
+            onChange={(e) => setNewRepo(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addRepo()}
+            placeholder="repository-name"
+          />
+        </Field>
+        <button
+          type="button"
+          onClick={addRepo}
+          className="mt-5.5 h-9 rounded-lg border border-zinc-800 bg-zinc-950 px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-400 transition-all duration-150 hover:border-blue-500 hover:text-blue-400 cursor-pointer select-none"
+        >
+          Add
+        </button>
+      </div>
+      <div className="grid gap-2">
+        {repos.map((repo, index) => (
+          <div key={index} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2">
+            <span className="text-[13px] text-zinc-300">{repo}</span>
+            <button
+              type="button"
+              onClick={() => removeRepo(index)}
+              className="flex h-6 w-6 items-center justify-center rounded-md border border-zinc-800 text-zinc-500 transition-all duration-150 hover:border-red-500 hover:text-red-500 cursor-pointer"
+            >
+              <Trash2 size={12} />
+            </button>
+          </div>
+        ))}
+      </div>
+      {repos.length === 0 && (
+        <p className="text-[11px] text-zinc-600">Add your pinned repository names (e.g., &quot;my-awesome-project&quot;)</p>
+      )}
+    </div>
+  )
+}
+
+const SNIPPET_TYPES = [
+  { type: 'currently-learning', label: 'Currently Learning', emoji: '📚' },
+  { type: 'currently-working', label: 'Currently Working On', emoji: '🔭' },
+  { type: 'fun-facts', label: 'Fun Facts', emoji: '⚡' },
+  { type: 'ask-me-about', label: 'Ask Me About', emoji: '💬' },
+  { type: 'how-to-reach', label: 'How to Reach Me', emoji: '📫' },
+  { type: 'pronouns', label: 'Pronouns', emoji: '😄' },
+  { type: 'goals', label: 'Goals for This Year', emoji: '🎯' },
+]
+
+const SnippetEditor = ({ section, updateSection }) => {
+  const c = section.content ?? {}
+  const items = c.items ?? []
+  const [newItem, setNewItem] = useState('')
+  
+  const addItem = () => {
+    if (!newItem.trim()) return
+    updateSection(section.id, { items: [...items, newItem.trim()] })
+    setNewItem('')
+  }
+  
+  const removeItem = (index) => {
+    updateSection(section.id, { items: items.filter((_, i) => i !== index) })
+  }
+  
+  const selectedSnippet = SNIPPET_TYPES.find(s => s.type === c.type) || SNIPPET_TYPES[0]
+  
+  return (
+    <div className="grid gap-4">
+      <Field label="Snippet Type">
+        <select
+          className={inputClass}
+          value={c.type ?? 'currently-learning'}
+          onChange={(e) => updateSection(section.id, { type: e.target.value })}
+        >
+          {SNIPPET_TYPES.map((s) => (
+            <option key={s.type} value={s.type}>{s.emoji} {s.label}</option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Alignment">
+        <select
+          className={inputClass}
+          value={c.align ?? 'left'}
+          onChange={(e) => updateSection(section.id, { align: e.target.value })}
+        >
+          {['left', 'center', 'right'].map((align) => (
+            <option key={align} value={align}>{align}</option>
+          ))}
+        </select>
+      </Field>
+      <div className="flex gap-2">
+        <Field label={`Add ${selectedSnippet.label} Item`}>
+          <input
+            className={inputClass}
+            value={newItem}
+            onChange={(e) => setNewItem(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addItem()}
+            placeholder={c.type === 'currently-learning' ? 'e.g., Next.js' : 'Enter item...'}
+          />
+        </Field>
+        <button
+          type="button"
+          onClick={addItem}
+          className="mt-5.5 h-9 rounded-lg border border-zinc-800 bg-zinc-950 px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-400 transition-all duration-150 hover:border-blue-500 hover:text-blue-400 cursor-pointer select-none"
+        >
+          Add
+        </button>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {items.map((item, index) => (
+          <div key={index} className="flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-950 py-1 pl-3 pr-1">
+            <span className="text-[12px] text-zinc-300">{item}</span>
+            <button
+              type="button"
+              onClick={() => removeItem(index)}
+              className="flex h-5 w-5 items-center justify-center rounded-full text-zinc-500 transition-all duration-150 hover:text-red-500 cursor-pointer"
+            >
+              <Trash2 size={10} />
+            </button>
+          </div>
+        ))}
+      </div>
+      {items.length === 0 && (
+        <p className="text-[11px] text-zinc-600">Add items that will appear as inline code tags</p>
+      )}
+    </div>
+  )
+}
+
 const SectionEditor = ({ section, updateSection, buildStatsUrl, techOptions, socialOptions, fallbackIcon }) => {
   switch (section.type) {
     case 'header': return <HeaderEditor section={section} updateSection={updateSection} />
     case 'about': return <AboutEditor section={section} updateSection={updateSection} />
     case 'stats': return <StatsEditor section={section} updateSection={updateSection} buildStatsUrl={buildStatsUrl} />
+    case 'streak': return <StreakEditor section={section} updateSection={updateSection} />
+    case 'activity': return <ActivityEditor section={section} updateSection={updateSection} />
+    case 'badges': return <BadgesEditor section={section} updateSection={updateSection} />
+    case 'repos': return <ReposEditor section={section} updateSection={updateSection} />
+    case 'snippet': return <SnippetEditor section={section} updateSection={updateSection} />
     case 'skills': return <SkillsEditor section={section} updateSection={updateSection} techOptions={techOptions} fallbackIcon={fallbackIcon} />
     case 'socials': return <SocialsEditor section={section} updateSection={updateSection} socialOptions={socialOptions} fallbackIcon={fallbackIcon} />
     case 'text': return <TextEditor section={section} updateSection={updateSection} />

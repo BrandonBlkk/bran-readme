@@ -112,6 +112,38 @@ export const buildStatsUrl = (content) => {
   return url.toString()
 }
 
+export const buildStreakUrl = (content) => {
+  const url = new URL('https://github-readme-streak-stats.herokuapp.com/')
+  if (content.username) url.searchParams.set('user', content.username)
+  if (content.theme) url.searchParams.set('theme', content.theme)
+  if (content.hideBorder) url.searchParams.set('hide_border', 'true')
+  if (content.bgColor) url.searchParams.set('background', sanitizeHex(content.bgColor))
+  if (content.strokeColor) url.searchParams.set('stroke', sanitizeHex(content.strokeColor))
+  if (content.ringColor) url.searchParams.set('ring', sanitizeHex(content.ringColor))
+  if (content.fireColor) url.searchParams.set('fire', sanitizeHex(content.fireColor))
+  if (content.currStreakColor) url.searchParams.set('currStreakNum', sanitizeHex(content.currStreakColor))
+  if (content.sideNumColor) url.searchParams.set('sideNums', sanitizeHex(content.sideNumColor))
+  if (content.sideLabelsColor) url.searchParams.set('sideLabels', sanitizeHex(content.sideLabelsColor))
+  if (content.dateColor) url.searchParams.set('dates', sanitizeHex(content.dateColor))
+  if (content.borderRadius !== undefined) url.searchParams.set('border_radius', String(content.borderRadius))
+  return url.toString()
+}
+
+export const buildActivityUrl = (content) => {
+  const url = new URL('https://github-readme-activity-graph.vercel.app/graph')
+  if (content.username) url.searchParams.set('username', content.username)
+  if (content.theme) url.searchParams.set('theme', content.theme)
+  if (content.bgColor) url.searchParams.set('bg_color', sanitizeHex(content.bgColor))
+  if (content.lineColor) url.searchParams.set('line', sanitizeHex(content.lineColor))
+  if (content.pointColor) url.searchParams.set('point', sanitizeHex(content.pointColor))
+  if (content.areaColor) url.searchParams.set('area_color', sanitizeHex(content.areaColor))
+  if (content.hideBorder) url.searchParams.set('hide_border', 'true')
+  if (content.hideGrid) url.searchParams.set('hide_grid', 'true')
+  if (content.area === true) url.searchParams.set('area', 'true')
+  if (content.radius !== undefined) url.searchParams.set('radius', String(content.radius))
+  return url.toString()
+}
+
 const buildLanguageStatsUrl = (content) => {
   const url = new URL('https://github-readme-stats-delta-eight-12.vercel.app/api/top-langs')
   if (content.username) url.searchParams.set('username', content.username)
@@ -252,6 +284,101 @@ const statsBlock = (c) => {
   )
 }
 
+const streakBlock = (c) => {
+  const streakUrl = buildStreakUrl(c)
+  const img = `<img src="${streakUrl}" alt="GitHub Streak Stats" />`
+  return buildAlignedBlock('center', img)
+}
+
+const activityBlock = (c) => {
+  const activityUrl = buildActivityUrl(c)
+  const img = `<img src="${activityUrl}" alt="GitHub Activity Graph" width="100%" />`
+  return buildAlignedBlock('center', img)
+}
+
+const badgesBlock = (c) => {
+  const items = c.items ?? []
+  if (!items.length) return 'Add some badges to display.'
+  const align = getContentAlign(c.align, 'left')
+  
+  const badges = items.map((badge) => {
+    const username = c.username || 'BrandonBlkk'
+    const color = badge.color || '58a6ff'
+    const style = badge.style || 'for-the-badge'
+    
+    switch (badge.type) {
+      case 'profile-views':
+        return `<img src="https://komarev.com/ghpvc/?username=${username}&color=${color}&style=${style}&label=${encodeURIComponent(badge.label || 'Profile Views')}" alt="Profile Views" />`
+      case 'followers':
+        return `<img src="https://img.shields.io/github/followers/${username}?label=${encodeURIComponent(badge.label || 'Followers')}&style=${style}&color=${color}" alt="Followers" />`
+      case 'stars':
+        return `<img src="https://img.shields.io/github/stars/${username}?label=${encodeURIComponent(badge.label || 'Stars')}&style=${style}&color=${color}" alt="Stars" />`
+      case 'repos':
+        return `<img src="https://badges.frapsoft.com/os/v2/open-source.svg?v=103" alt="Open Source" />`
+      case 'custom':
+        return `<img src="https://img.shields.io/static/v1?label=${encodeURIComponent(badge.label || 'Badge')}&message=${encodeURIComponent(badge.message || 'Value')}&color=${color}&style=${style}" alt="${badge.label || 'Custom Badge'}" />`
+      default:
+        return `<img src="https://img.shields.io/static/v1?label=${encodeURIComponent(badge.label || 'Badge')}&message=${encodeURIComponent(badge.message || '')}&color=${color}&style=${style}" alt="${badge.label}" />`
+    }
+  }).join('\n')
+  
+  return buildAlignedBlock(align, badges)
+}
+
+const reposBlock = (c) => {
+  const username = c.username || 'BrandonBlkk'
+  const repos = c.repos ?? []
+  const align = getContentAlign(c.align, 'center')
+  
+  if (!repos.length) {
+    return buildAlignedBlock(align, `<p><em>Add pinned repository names to display them here.</em></p>`)
+  }
+  
+  const repoCards = repos.map((repo) => {
+    const repoName = typeof repo === 'string' ? repo : repo.name
+    return `<a href="https://github.com/${username}/${repoName}"><img src="https://github-readme-stats-delta-eight-12.vercel.app/api/pin/?username=${username}&repo=${repoName}&theme=${c.theme || 'dark'}&hide_border=${c.hideBorder !== false}" alt="${repoName}" /></a>`
+  }).join('\n')
+  
+  return buildAlignedBlock(align, repoCards)
+}
+
+const snippetBlock = (c) => {
+  const type = c.type || 'currently-learning'
+  const items = c.items ?? []
+  const align = getContentAlign(c.align, 'left')
+  
+  const SNIPPET_TITLES = {
+    'currently-learning': 'Currently Learning',
+    'currently-working': 'Currently Working On',
+    'fun-facts': 'Fun Facts',
+    'ask-me-about': 'Ask Me About',
+    'how-to-reach': 'How to Reach Me',
+    'pronouns': 'Pronouns',
+    'goals': 'Goals for This Year',
+  }
+  
+  const title = SNIPPET_TITLES[type] || 'Info'
+  const emoji = {
+    'currently-learning': '📚',
+    'currently-working': '🔭',
+    'fun-facts': '⚡',
+    'ask-me-about': '💬',
+    'how-to-reach': '📫',
+    'pronouns': '😄',
+    'goals': '🎯',
+  }[type] || '📌'
+  
+  if (!items.length) {
+    return `**${emoji} ${title}:** _Add some items..._`
+  }
+  
+  const formattedItems = items.map((item) => `\`${item}\``).join(', ')
+  const line = `**${emoji} ${title}:** ${formattedItems}`
+  
+  if (align === 'left') return line
+  return `<p align="${align}">${line}</p>`
+}
+
 const skillsBlock = (c) => {
   const items = (c.items ?? [])
     .map((slug) => TECH_ICON_MAP[slug] ?? { title: slug, slug })
@@ -339,6 +466,11 @@ export const generateMarkdown = (sections) =>
       switch (s.type) {
         case 'header': return headerBlock(c)
         case 'stats': return statsBlock(c)
+        case 'streak': return streakBlock(c)
+        case 'activity': return activityBlock(c)
+        case 'badges': return badgesBlock(c)
+        case 'repos': return reposBlock(c)
+        case 'snippet': return snippetBlock(c)
         case 'skills': return skillsBlock(c)
         case 'socials': return socialsBlock(c)
         case 'about': return aboutBlock(c)

@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useRef } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
@@ -126,7 +126,7 @@ const applyProfileDefaultsToSections = (
       }
     }
 
-    if (section.type === 'stats') {
+    if (section.type === 'stats' || section.type === 'streak' || section.type === 'activity' || section.type === 'badges' || section.type === 'repos') {
       const nextUsername = normalizeTextValue(profileDefaults.githubUser) || DEFAULT_PROFILE.githubUser
       const currentUsername = normalizeTextValue(section.content?.username)
       const shouldReplace = shouldReplaceWithProfileDefault(
@@ -188,6 +188,48 @@ const BASE_TEMPLATE_CONTENT = {
     cardWidth: 420,
     lineHeight: 28,
   },
+  streak: {
+    theme: 'dark',
+    hideBorder: true,
+    bgColor: '#171f2b',
+    strokeColor: '#58a6ff',
+    ringColor: '#58a6ff',
+    fireColor: '#fbbf24',
+    currStreakColor: '#58a6ff',
+    sideNumColor: '#c9d1d9',
+    sideLabelsColor: '#8b949e',
+    dateColor: '#8b949e',
+    borderRadius: 8,
+  },
+  activity: {
+    theme: 'github-compact',
+    bgColor: '#171f2b',
+    lineColor: '#58a6ff',
+    pointColor: '#58a6ff',
+    areaColor: '#58a6ff',
+    hideBorder: true,
+    hideGrid: false,
+    radius: 8,
+  },
+  badges: {
+    items: [
+      { type: 'profile-views', label: 'Profile Views', color: '58a6ff' },
+      { type: 'followers', label: 'Followers', color: '22c55e' },
+    ],
+    align: 'left',
+  },
+  repos: {
+    count: 4,
+    showStars: true,
+    showForks: true,
+    showDescription: true,
+    align: 'center',
+  },
+  snippet: {
+    type: 'currently-learning',
+    items: ['Next.js', 'GraphQL', 'Rust'],
+    align: 'left',
+  },
   skills: {
     items: ['react', 'typescript', 'tailwindcss', 'vite', 'nodedotjs'],
     iconSize: 40,
@@ -233,6 +275,11 @@ const SECTION_LIBRARY = [
   { type: 'header', label: 'Header', description: 'Name, tagline, and key links.' },
   { type: 'about', label: 'About', description: 'Short bio or mission statement.' },
   { type: 'stats', label: 'GitHub Stats', description: 'Live stats card with theming controls.' },
+  { type: 'streak', label: 'Streak Stats', description: 'Current streak, longest streak, and contributions.' },
+  { type: 'activity', label: 'Activity Graph', description: 'Contribution activity visualization.' },
+  { type: 'badges', label: 'Custom Badges', description: 'Profile views, followers, and custom badges.' },
+  { type: 'repos', label: 'Pinned Repos', description: 'Showcase your pinned GitHub repositories.' },
+  { type: 'snippet', label: 'Quick Snippets', description: 'Currently learning, working on, fun facts.' },
   { type: 'skills', label: 'Skills Icons', description: 'Simple Icons tech stack strip.' },
   { type: 'socials', label: 'Social Links', description: 'Primary links and profiles.' },
   { type: 'text', label: 'Text Block', description: 'Custom text with size and alignment.' },
@@ -382,6 +429,11 @@ const useSectionStore = create(
 
 const SECTION_TITLE_MAP = {
   stats: 'Stats',
+  streak: 'Streak Stats',
+  activity: 'Activity Graph',
+  badges: 'Badges',
+  repos: 'Pinned Repos',
+  snippet: 'Quick Info',
   skills: 'Tech Stack',
   socials: 'Socials',
   about: 'About',
@@ -402,6 +454,11 @@ const SECTION_PILL_BASE =
 const SECTION_PILL_VARIANTS = {
   header: 'text-[#a78bfa] border-[rgba(167,139,250,0.3)] bg-[rgba(167,139,250,0.08)]',
   stats: 'text-[#34d399] border-[rgba(52,211,153,0.3)] bg-[rgba(52,211,153,0.08)]',
+  streak: 'text-[#f97316] border-[rgba(249,115,22,0.3)] bg-[rgba(249,115,22,0.08)]',
+  activity: 'text-[#22d3ee] border-[rgba(34,211,238,0.3)] bg-[rgba(34,211,238,0.08)]',
+  badges: 'text-[#a855f7] border-[rgba(168,85,247,0.3)] bg-[rgba(168,85,247,0.08)]',
+  repos: 'text-[#10b981] border-[rgba(16,185,129,0.3)] bg-[rgba(16,185,129,0.08)]',
+  snippet: 'text-[#ec4899] border-[rgba(236,72,153,0.3)] bg-[rgba(236,72,153,0.08)]',
   skills: 'text-[#fbbf24] border-[rgba(251,191,36,0.3)] bg-[rgba(251,191,36,0.08)]',
   socials: 'text-[#60a5fa] border-[rgba(96,165,250,0.3)] bg-[rgba(96,165,250,0.08)]',
   about: 'text-[#f472b6] border-[rgba(244,114,182,0.3)] bg-[rgba(244,114,182,0.08)]',
