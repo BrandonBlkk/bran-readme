@@ -268,6 +268,22 @@ const getTemplateContent = () => {
       ...clone(BASE_TEMPLATE_CONTENT.stats),
       username: githubUser,
     },
+    streak: {
+      ...clone(BASE_TEMPLATE_CONTENT.streak),
+      username: githubUser,
+    },
+    activity: {
+      ...clone(BASE_TEMPLATE_CONTENT.activity),
+      username: githubUser,
+    },
+    badges: {
+      ...clone(BASE_TEMPLATE_CONTENT.badges),
+      username: githubUser,
+    },
+    repos: {
+      ...clone(BASE_TEMPLATE_CONTENT.repos),
+      username: githubUser,
+    },
   }
 }
 
