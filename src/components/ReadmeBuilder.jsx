@@ -535,7 +535,28 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
   const scrollContainerRef = useRef(null)
   const autoScrollRAF = useRef(null)
 
-  // Auto-scroll during drag
+  // Enable mouse wheel scrolling during drag
+  useEffect(() => {
+    if (!activeId) return
+
+    const container = scrollContainerRef.current
+    if (!container) return
+
+    const handleWheelScroll = (e) => {
+      e.preventDefault()
+      container.scrollTop += e.deltaY
+    }
+
+    container.addEventListener('wheel', handleWheelScroll, { passive: false })
+    window.addEventListener('wheel', handleWheelScroll, { passive: false })
+
+    return () => {
+      container.removeEventListener('wheel', handleWheelScroll)
+      window.removeEventListener('wheel', handleWheelScroll)
+    }
+  }, [activeId])
+
+  // Auto-scroll during drag when near edges
   useEffect(() => {
     if (!activeId) {
       if (autoScrollRAF.current) {
@@ -548,8 +569,8 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
     const container = scrollContainerRef.current
     if (!container) return
 
-    const SCROLL_THRESHOLD = 80
-    const MAX_SCROLL_SPEED = 15
+    const SCROLL_THRESHOLD = 100
+    const MAX_SCROLL_SPEED = 12
 
     const handleAutoScroll = (e) => {
       if (!activeId) return
