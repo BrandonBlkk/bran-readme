@@ -10,6 +10,7 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
+import { restrictToVerticalAxis, restrictToWindowEdges } from '@dnd-kit/modifiers'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { toast } from 'sonner'
 import { AnimatePresence } from 'framer-motion'
@@ -531,6 +532,70 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
     }
   })
   const sectionCardRefs = useRef(new Map())
+  const scrollContainerRef = useRef(null)
+  const autoScrollRAF = useRef(null)
+
+  // Auto-scroll during drag
+  useEffect(() => {
+    if (!activeId) {
+      if (autoScrollRAF.current) {
+        cancelAnimationFrame(autoScrollRAF.current)
+        autoScrollRAF.current = null
+      }
+      return
+    }
+
+    const container = scrollContainerRef.current
+    if (!container) return
+
+    const SCROLL_THRESHOLD = 80
+    const MAX_SCROLL_SPEED = 15
+
+    const handleAutoScroll = (e) => {
+      if (!activeId) return
+
+      const containerRect = container.getBoundingClientRect()
+      const mouseY = e.clientY
+
+      const distanceFromTop = mouseY - containerRect.top
+      const distanceFromBottom = containerRect.bottom - mouseY
+
+      let scrollDelta = 0
+
+      if (distanceFromTop < SCROLL_THRESHOLD && distanceFromTop > 0) {
+        const intensity = 1 - distanceFromTop / SCROLL_THRESHOLD
+        scrollDelta = -MAX_SCROLL_SPEED * intensity
+      } else if (distanceFromBottom < SCROLL_THRESHOLD && distanceFromBottom > 0) {
+        const intensity = 1 - distanceFromBottom / SCROLL_THRESHOLD
+        scrollDelta = MAX_SCROLL_SPEED * intensity
+      }
+
+      if (scrollDelta !== 0) {
+        const scroll = () => {
+          if (!activeId) return
+          container.scrollTop += scrollDelta
+          autoScrollRAF.current = requestAnimationFrame(scroll)
+        }
+        if (autoScrollRAF.current) {
+          cancelAnimationFrame(autoScrollRAF.current)
+        }
+        autoScrollRAF.current = requestAnimationFrame(scroll)
+      } else if (autoScrollRAF.current) {
+        cancelAnimationFrame(autoScrollRAF.current)
+        autoScrollRAF.current = null
+      }
+    }
+
+    window.addEventListener('pointermove', handleAutoScroll)
+    return () => {
+      window.removeEventListener('pointermove', handleAutoScroll)
+      if (autoScrollRAF.current) {
+        cancelAnimationFrame(autoScrollRAF.current)
+        autoScrollRAF.current = null
+      }
+    }
+  }, [activeId])
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 4 },
@@ -1115,6 +1180,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
       >
         {/* ── Builder Column ─────────────────── */}
         <div
+          ref={scrollContainerRef}
           className={`relative border-b border-zinc-800 ${isEditorOpen ? 'block' : 'hidden'} lg:block lg:sticky lg:top-12.25 lg:h-[calc(100vh-49px)] lg:overflow-y-auto lg:border-b-0 lg:border-r [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-[3px] [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-track]:bg-transparent hover:[&::-webkit-scrollbar-thumb]:bg-zinc-700`}
         >
           <div className="p-4 sm:p-5">
@@ -1183,13 +1249,14 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
                 <EmptyState onQuickStart={handleQuickStart} />
               ) : (
                 <div className="flex flex-col gap-2">
-                  <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
-                    onDragCancel={handleDragCancel}
-                  >
+<DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                modifiers={[restrictToVerticalAxis, restrictToWindowEdges]}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDragCancel={handleDragCancel}
+              >
                     <SortableContext
                       items={sections.map((s) => s.id)}
                       strategy={verticalListSortingStrategy}
