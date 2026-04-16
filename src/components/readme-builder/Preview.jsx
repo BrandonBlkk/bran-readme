@@ -148,7 +148,7 @@ const Preview = ({
             className,
             theme.link,
             'hover:underline',
-            isRepoPinLink ? 'block mb-3 last:mb-0 sm:mb-0 sm:inline-block' : '',
+            isRepoPinLink ? 'block mb-3 last:mb-0 sm:mb-1 sm:last:mb-0 sm:inline-block' : '',
             isOnlyVisual ? 'select-none' : '',
             isInteractivePreview ? 'pointer-events-none' : '',
           ]

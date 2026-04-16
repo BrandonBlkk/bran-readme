@@ -6,7 +6,15 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ## [Unreleased]
 
-- (No changes yet)
+### Added
+
+- New template sections (Git Streak Card, Activity Graph, Custom Badges, Pinned Repos, and Quich Snippets)
+
+### Fixed
+
+- Resolved rendering issues where Git Stats were not displaying correctly on GitHub profiles.
+- Fixed tech and social icon visibility and restored control over icon sizing and spacing.
+- Corrected layout issues where repository card spacing was not applying properly.
 
 ## [0.1.0] - 2026-04-13
 

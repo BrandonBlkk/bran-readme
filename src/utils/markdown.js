@@ -396,7 +396,7 @@ const reposBlock = (c) => {
   
   const repoCards = repos.map((repo) => {
     const repoName = typeof repo === 'string' ? repo : repo.name
-    return `<a href="https://github.com/${username}/${repoName}"><img src="https://github-readme-stats-delta-eight-12.vercel.app/api/pin/?username=${username}&repo=${repoName}&theme=${c.theme || 'dark'}&hide_border=${c.hideBorder !== false}" alt="${repoName}" /></a>`
+    return `<a href="https://github.com/${username}/${repoName}"><img src="https://github-readme-stats-delta-eight-12.vercel.app/api/pin/?username=${username}&repo=${repoName}&theme=${c.theme || 'dracula'}&hide_border=${c.hideBorder !== false}" alt="${repoName}" /></a>`
   }).join(' ')
   
   return buildAlignedBlock(align, repoCards)
