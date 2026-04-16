@@ -275,7 +275,7 @@ const statsBlock = (c) => {
   const { width: cardWidth, height: cardHeight } = getStatsCardDimensions(c)
   const statsOrder = normalizeGitStatsOrder(c.statsOrder)
   const statsRowGap = '<br />'
-  const statsCardGap = '&nbsp;&nbsp;'
+  const statsCardGap = '&nbsp;&nbsp;&nbsp;&nbsp;'
   const streakWidth = Math.round(cardWidth * 1.08)
   const buildStatsRow = (content) => buildAlignedBlock('center', content)
   const cardsById = {
@@ -290,7 +290,7 @@ const statsBlock = (c) => {
       ? {
           id: 'languages',
           pairable: true,
-          markup: `<img src="${buildLanguageStatsUrl(c)}" alt="Top Languages" width="${cardWidth}" height="${cardHeight}" />`,
+          markup: `<img src="${buildLanguageStatsUrl(c)}" alt="Top Languages" width="350" height="${cardHeight}" />`,
         }
       : null,
     streak: c.showStreakStats !== false
@@ -328,8 +328,10 @@ const statsBlock = (c) => {
     const nextCard = orderedCards[index + 1]
 
     if (card.pairable && nextCard?.pairable) {
+      // Remove height so GitHub renders both cards inline side-by-side
+      const toPaired = (m) => m.replace(/ height="\d+"/, '')
       rows.push(
-        buildStatsRow([card.markup, statsCardGap, nextCard.markup].join('')),
+        buildStatsRow([toPaired(card.markup), statsCardGap, toPaired(nextCard.markup)].join('')),
       )
       index += 1
       continue
