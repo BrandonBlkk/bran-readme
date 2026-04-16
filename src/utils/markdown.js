@@ -81,16 +81,18 @@ const clampNumber = (value, min, max, fallback) => {
   return Math.min(max, Math.max(min, numeric))
 }
 const getIconSize = (value, fallback = 40) =>
-  Math.round(clampNumber(value, 18, 40, fallback))
-const getIconSpacing = (value, fallback = 1) =>
-  Math.round(clampNumber(value, 0, 6, fallback))
+  Math.round(clampNumber(value, 18, 64, fallback))
+const getIconSpacing = (value, fallback = 12) =>
+  Math.round(clampNumber(value, 0, 64, fallback))
 const getContentAlign = (value, fallback = 'left') => {
   const candidate = String(value ?? fallback).toLowerCase()
   return TEXT_ALIGNMENTS.includes(candidate) ? candidate : fallback
 }
-const buildIconSpacer = (value, fallback = 1) => {
+const buildIconSpacer = (value, fallback = 12) => {
   const spacing = getIconSpacing(value, fallback)
-  return spacing > 0 ? `<span>${'&nbsp;'.repeat(spacing)}</span>` : ''
+  if (spacing <= 0) return ''
+  const nbspCount = spacing
+  return '&nbsp;'.repeat(nbspCount)
 }
 
 export const buildStatsUrl = (content) => {
@@ -245,11 +247,9 @@ const indentBlock = (block, baseDepth = 1) => {
 
 const buildAlignedBlock = (align, content) => [
   `<div align="${align}">`,
-  indentBlock(content),
+  content, // Removed indentBlock call here to prevent whitespace issues in preview
   '</div>',
-]
-  .filter((line) => String(line ?? '').trim().length > 0)
-  .join('\n')
+].join('\n')
 
 const headerBlock = (c) => {
   const align = getContentAlign(c.align, 'left')
@@ -378,7 +378,7 @@ const badgesBlock = (c) => {
       default:
         return `<img src="https://img.shields.io/static/v1?label=${encodeURIComponent(badge.label || 'Badge')}&message=${encodeURIComponent(badge.message || '')}&color=${color}&style=${style}" alt="${badge.label}" />`
     }
-  }).join('\n')
+  }).join(' ') // Space for badges instead of newline
   
   return buildAlignedBlock(align, badges)
 }
@@ -395,7 +395,7 @@ const reposBlock = (c) => {
   const repoCards = repos.map((repo) => {
     const repoName = typeof repo === 'string' ? repo : repo.name
     return `<a href="https://github.com/${username}/${repoName}"><img src="https://github-readme-stats-delta-eight-12.vercel.app/api/pin/?username=${username}&repo=${repoName}&theme=${c.theme || 'dark'}&hide_border=${c.hideBorder !== false}" alt="${repoName}" /></a>`
-  }).join('\n')
+  }).join(' ')
   
   return buildAlignedBlock(align, repoCards)
 }
@@ -443,20 +443,21 @@ const skillsBlock = (c) => {
     .filter(Boolean)
   if (!items.length) return 'Add your tech stack icons.'
   const align = getContentAlign(c.align, 'left')
-  const iconSize = getIconSize(c.iconSize, 40)
-  const spacer = buildIconSpacer(c.iconSpacing, 1)
-  const icons = items
-    .flatMap((icon, index) => {
+  const iconSize = getIconSize(c.iconSize, 30)
+  const spacer = buildIconSpacer(c.iconSpacing, 12)
+  
+  const iconsContent = items
+    .map((icon, index) => {
       const slug = toSkillIconsSlug(icon.slug)
       const src = slug
         ? `https://skillicons.dev/icons?i=${slug}&theme=dark`
         : FALLBACK_ICON
-      const img = `<img src="${src}" alt="${icon.title}" width="${iconSize}" height="${iconSize}" />`
-      return index < items.length - 1 && spacer ? [img, spacer] : [img]
+      const img = `<img src="${src}" alt="${icon.title}" height="${iconSize}" />`
+      return index < items.length - 1 && spacer ? `${img}${spacer}` : img
     })
-    .join('\n')
+    .join('')
 
-  return [`<div align="${align}">`, indentBlock(icons), '</div>'].join('\n')
+  return `<div align="${align}">${iconsContent}</div>`
 }
 
 const socialsBlock = (c) => {
@@ -470,22 +471,25 @@ const socialsBlock = (c) => {
   const align = getContentAlign(c.align, 'left')
   const iconLinks = links.filter((l) => l.slug)
   const textLinks = links.filter((l) => !l.slug)
-  const iconSize = getIconSize(c.iconSize, 40)
-  const spacer = buildIconSpacer(c.iconSpacing, 1)
-  const icons = iconLinks
-    .flatMap((link, index) => {
+  const iconSize = getIconSize(c.iconSize, 30)
+  const spacer = buildIconSpacer(c.iconSpacing, 12)
+  
+  const iconsContent = iconLinks
+    .map((link, index) => {
       const slug = link.slug || toSocialSlug(link.label)
       const src = slug ? `https://skillicons.dev/icons?i=${slug}` : FALLBACK_ICON
       const label = link.label || (SOCIAL_ICON_MAP[slug]?.title ?? slug)
-      const icon = `<a href="${link.url}"><img src="${src}" alt="${label}" width="${iconSize}" height="${iconSize}" /></a>`
-      return index < iconLinks.length - 1 && spacer ? [icon, spacer] : [icon]
+      const icon = `<a href="${link.url}"><img src="${src}" alt="${label}" height="${iconSize}" /></a>`
+      return index < iconLinks.length - 1 && spacer ? `${icon}${spacer}` : icon
     })
+    .join('')
 
   const list = textLinks.map((l) => `- [${l.label}](${l.url})`).join('\n')
 
-  const iconsBlock = icons.length
-    ? [`<div align="${align}">`, indentBlock(icons.join('\n')), '</div>'].join('\n')
+  const iconsBlock = iconsContent.length
+    ? `<div align="${align}">${iconsContent}</div>`
     : ''
+    
   if (iconsBlock && list) return `${iconsBlock}\n\n${list}`
   if (iconsBlock) return iconsBlock
   return list

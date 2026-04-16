@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useRef } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
@@ -257,12 +257,12 @@ const BASE_TEMPLATE_CONTENT = {
   skills: {
     items: ['react', 'typescript', 'tailwindcss', 'vite', 'nodedotjs'],
     iconSize: 40,
-    iconSpacing: 1,
+    iconSpacing: 2,
     align: 'left',
   },
   socials: {
     iconSize: 40,
-    iconSpacing: 1,
+    iconSpacing: 2,
     align: 'left',
     links: [
       { label: 'LinkedIn', slug: 'linkedin', url: 'https://linkedin.com/in/username' },
@@ -790,7 +790,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
         return (wrappedMatch[1].match(/&nbsp;/g) || []).length
       }
 
-      const inlineMatch = String(value ?? '').match(/((?:&nbsp;){1,6})/i)
+      const inlineMatch = String(value ?? '').match(/((?:&nbsp;){1,20})/i)
       return inlineMatch ? (inlineMatch[1].match(/&nbsp;/g) || []).length : undefined
     }
 

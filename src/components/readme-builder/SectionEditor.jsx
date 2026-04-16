@@ -396,15 +396,15 @@ const SkillsEditor = ({ section, updateSection, techOptions, fallbackIcon }) => 
         <RangeField
           label="Icon Size"
           min={18}
-          max={40}
+          max={64}
           value={c.iconSize ?? 40}
           onChange={(v) => updateSection(section.id, { iconSize: v })}
         />
         <RangeField
           label="Icon Spacing"
           min={0}
-          max={6}
-          value={c.iconSpacing ?? 1}
+          max={20}
+          value={c.iconSpacing ?? 2}
           onChange={(v) => updateSection(section.id, { iconSpacing: v })}
         />
         <Field label="Alignment">
@@ -647,15 +647,15 @@ const addSocial = (icon) => {
         <RangeField
           label="Icon Size"
           min={18}
-          max={40}
+          max={64}
           value={c.iconSize ?? 40}
           onChange={(v) => updateSection(section.id, { iconSize: v })}
         />
         <RangeField
           label="Icon Spacing"
           min={0}
-          max={6}
-          value={c.iconSpacing ?? 1}
+          max={20}
+          value={c.iconSpacing ?? 2}
           onChange={(v) => updateSection(section.id, { iconSpacing: v })}
         />
         <Field label="Alignment">
