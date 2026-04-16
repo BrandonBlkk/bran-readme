@@ -1,5 +1,6 @@
 import { hasSupabaseConfig, supabase } from '../lib/supabaseClient'
 import { normalizeTemplatePayload, sanitizeTags } from '../utils/templatePayload'
+import { normalizeGitStatsOrder } from '../utils/gitStats'
 
 const TABLE_NAME = 'templates'
 const TEMPLATE_COLUMNS = `
@@ -31,9 +32,32 @@ const BASE_CONTENT = {
     theme: 'transparent',
     showMainStats: true,
     showLanguageStats: true,
+    showStreakStats: true,
+    showActivityGraph: true,
     showTrophyStats: true,
+    statsOrder: normalizeGitStatsOrder(['main', 'languages', 'streak', 'activity', 'trophies']),
     showIcons: true,
     hideBorder: true,
+    streakTheme: 'dark',
+    streakHideBorder: true,
+    streakBgColor: '#171f2b',
+    streakStrokeColor: '#58a6ff',
+    streakRingColor: '#58a6ff',
+    streakFireColor: '#fbbf24',
+    streakCurrStreakColor: '#58a6ff',
+    streakSideNumColor: '#c9d1d9',
+    streakSideLabelsColor: '#8b949e',
+    streakDateColor: '#8b949e',
+    streakBorderRadius: 8,
+    activityTheme: 'github-compact',
+    activityBgColor: '#171f2b',
+    activityLineColor: '#58a6ff',
+    activityPointColor: '#58a6ff',
+    activityAreaColor: '#58a6ff',
+    activityHideBorder: true,
+    activityHideGrid: false,
+    activityShowArea: false,
+    activityRadius: 8,
   },
   skills: {
     items: ['react', 'typescript', 'tailwindcss', 'vite', 'nodedotjs'],

@@ -9,6 +9,8 @@ const isPreviewAsset = (src = '') =>
     src.includes('cdn.simpleicons.org')
     || src.includes('skillicons.dev')
     || src.includes('github-readme-stats-delta-eight-12.vercel.app')
+    || src.includes('github-readme-streak-stats.herokuapp.com')
+    || src.includes('github-readme-activity-graph.vercel.app')
     || src.includes('github-profile-trophy.screw-hand.vercel.app')
     || src.includes('github-profile-trophy-alpha-ecru.vercel.app')
     || src.includes('github-profile-trophy.vercel.app')
@@ -28,6 +30,20 @@ const hasOnlyVisualChildren = (children) => {
   const nodes = React.Children.toArray(children)
   return nodes.length > 0 && nodes.every(isVisualOnlyNode)
 }
+
+const hasRepoPinImage = (children) =>
+  React.Children.toArray(children).some((child) =>
+    React.isValidElement(child)
+    && typeof child.props?.src === 'string'
+    && child.props.src.includes('/api/pin/'),
+  )
+
+const isRepoPinNode = (node) =>
+  React.isValidElement(node)
+  && (
+    (node.type === 'a' || node.props?.node?.tagName === 'a')
+    && hasRepoPinImage(node.props?.children)
+  )
 
 const Preview = ({
   markdown,
@@ -89,9 +105,15 @@ const Preview = ({
     ),
     div: ({ className = '', children, ...props }) => {
       const isOnlyVisual = hasOnlyVisualChildren(children)
+      const childNodes = React.Children.toArray(children)
+      const isRepoPinsBlock = childNodes.some(isRepoPinNode)
       return (
         <div
-          className={[className, isOnlyVisual ? 'select-none' : ''].filter(Boolean).join(' ')}
+          className={[
+            className,
+            isOnlyVisual ? 'select-none' : '',
+            isRepoPinsBlock ? 'pt-3' : '',
+          ].filter(Boolean).join(' ')}
           {...props}
         >
           {children}
@@ -119,12 +141,14 @@ const Preview = ({
     ),
     a: ({ className = '', children, ...props }) => {
       const isOnlyVisual = hasOnlyVisualChildren(children)
+      const isRepoPinLink = hasRepoPinImage(children)
       return (
         <a
           className={[
             className,
             theme.link,
             'hover:underline',
+            isRepoPinLink ? 'block mb-3 last:mb-0 sm:mb-0 sm:inline-block' : '',
             isOnlyVisual ? 'select-none' : '',
             isInteractivePreview ? 'pointer-events-none' : '',
           ]
@@ -160,6 +184,8 @@ const Preview = ({
       const isGitStats = typeof src === 'string'
         && (
           src.includes('github-readme-stats-delta-eight-12.vercel.app')
+          || src.includes('github-readme-streak-stats.herokuapp.com')
+          || src.includes('github-readme-activity-graph.vercel.app')
           || src.includes('github-profile-trophy.screw-hand.vercel.app')
           || src.includes('github-profile-trophy-alpha-ecru.vercel.app')
           || src.includes('github-profile-trophy.vercel.app')
@@ -230,7 +256,7 @@ const Preview = ({
 
   return (
     <div
-      className={`w-full max-w-220 rounded-xl border ${theme.container} shadow-[0_4px_12px_rgba(0,0,0,0.5)]`}
+      className={`w-full sm:w-[calc(100%-4.5rem)] rounded-xl border ${theme.container} shadow-[0_4px_12px_rgba(0,0,0,0.5)]`}
     >
       <div className="px-4 py-5 sm:px-6 md:px-10 md:py-8">
         <div className="wrap-break-word text-sm leading-normal sm:text-base font-['-apple-system', BlinkMacSystemFont,'Segoe_UI','Noto_Sans',Helvetica,Arial,sans-serif]">

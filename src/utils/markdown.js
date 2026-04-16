@@ -1,5 +1,6 @@
 import { techData } from './tech-data'
 import { socialData } from './social-data'
+import { normalizeGitStatsOrder } from './gitStats'
 
 export const FALLBACK_ICON = 'https://cdn.simpleicons.org/simpleicons/999'
 
@@ -73,6 +74,7 @@ const toSocialSlug = (value) => {
 }
 
 const sanitizeHex = (value) => String(value ?? '').replace('#', '').trim()
+const pickDefined = (...values) => values.find((value) => typeof value !== 'undefined')
 const clampNumber = (value, min, max, fallback) => {
   const numeric = Number(value)
   if (Number.isNaN(numeric)) return fallback
@@ -109,6 +111,58 @@ export const buildStatsUrl = (content) => {
     url.searchParams.set('border_radius', String(content.borderRadius))
   if (content.cardWidth) url.searchParams.set('card_width', String(content.cardWidth))
   if (content.lineHeight) url.searchParams.set('line_height', String(content.lineHeight))
+  return url.toString()
+}
+
+export const buildStreakUrl = (content) => {
+  const url = new URL('https://github-readme-streak-stats.herokuapp.com/')
+  const streakTheme = pickDefined(content.streakTheme, content.theme)
+  const streakHideBorder = pickDefined(content.streakHideBorder, content.hideBorder)
+  const streakBgColor = pickDefined(content.streakBgColor, content.bgColor)
+  const streakStrokeColor = pickDefined(content.streakStrokeColor, content.strokeColor)
+  const streakRingColor = pickDefined(content.streakRingColor, content.ringColor)
+  const streakFireColor = pickDefined(content.streakFireColor, content.fireColor)
+  const streakCurrStreakColor = pickDefined(content.streakCurrStreakColor, content.currStreakColor)
+  const streakSideNumColor = pickDefined(content.streakSideNumColor, content.sideNumColor)
+  const streakSideLabelsColor = pickDefined(content.streakSideLabelsColor, content.sideLabelsColor)
+  const streakDateColor = pickDefined(content.streakDateColor, content.dateColor)
+  const streakBorderRadius = pickDefined(content.streakBorderRadius, content.borderRadius)
+  if (content.username) url.searchParams.set('user', content.username)
+  if (streakTheme) url.searchParams.set('theme', streakTheme)
+  if (streakHideBorder) url.searchParams.set('hide_border', 'true')
+  if (streakBgColor) url.searchParams.set('background', sanitizeHex(streakBgColor))
+  if (streakStrokeColor) url.searchParams.set('stroke', sanitizeHex(streakStrokeColor))
+  if (streakRingColor) url.searchParams.set('ring', sanitizeHex(streakRingColor))
+  if (streakFireColor) url.searchParams.set('fire', sanitizeHex(streakFireColor))
+  if (streakCurrStreakColor) url.searchParams.set('currStreakNum', sanitizeHex(streakCurrStreakColor))
+  if (streakSideNumColor) url.searchParams.set('sideNums', sanitizeHex(streakSideNumColor))
+  if (streakSideLabelsColor) url.searchParams.set('sideLabels', sanitizeHex(streakSideLabelsColor))
+  if (streakDateColor) url.searchParams.set('dates', sanitizeHex(streakDateColor))
+  if (streakBorderRadius !== undefined) url.searchParams.set('border_radius', String(streakBorderRadius))
+  return url.toString()
+}
+
+export const buildActivityUrl = (content) => {
+  const url = new URL('https://github-readme-activity-graph.vercel.app/graph')
+  const activityTheme = pickDefined(content.activityTheme, content.theme)
+  const activityBgColor = pickDefined(content.activityBgColor, content.bgColor)
+  const activityLineColor = pickDefined(content.activityLineColor, content.lineColor)
+  const activityPointColor = pickDefined(content.activityPointColor, content.pointColor)
+  const activityAreaColor = pickDefined(content.activityAreaColor, content.areaColor)
+  const activityHideBorder = pickDefined(content.activityHideBorder, content.hideBorder)
+  const activityHideGrid = pickDefined(content.activityHideGrid, content.hideGrid)
+  const activityShowArea = pickDefined(content.activityShowArea, content.area)
+  const activityRadius = pickDefined(content.activityRadius, content.radius)
+  if (content.username) url.searchParams.set('username', content.username)
+  if (activityTheme) url.searchParams.set('theme', activityTheme)
+  if (activityBgColor) url.searchParams.set('bg_color', sanitizeHex(activityBgColor))
+  if (activityLineColor) url.searchParams.set('line', sanitizeHex(activityLineColor))
+  if (activityPointColor) url.searchParams.set('point', sanitizeHex(activityPointColor))
+  if (activityAreaColor) url.searchParams.set('area_color', sanitizeHex(activityAreaColor))
+  if (activityHideBorder) url.searchParams.set('hide_border', 'true')
+  if (activityHideGrid) url.searchParams.set('hide_grid', 'true')
+  if (activityShowArea === true) url.searchParams.set('area', 'true')
+  if (activityRadius !== undefined) url.searchParams.set('radius', String(activityRadius))
   return url.toString()
 }
 
@@ -218,38 +272,169 @@ const headerBlock = (c) => {
 }
 
 const statsBlock = (c) => {
-  const mainCard = c.showMainStats !== false
-    ? { alt: 'GitHub Stats', src: buildStatsUrl(c) }
-    : null
-  const languageCard = c.showLanguageStats !== false
-    ? { alt: 'Top Languages', src: buildLanguageStatsUrl(c) }
-    : null
-  const trophyCard = c.showTrophyStats !== false
-    ? { alt: 'GitHub Trophies', src: buildTrophyStatsUrl(c) }
-    : null
-
-  if (!mainCard && !languageCard && !trophyCard) return 'Enable at least one GitHub card.'
-
   const { width: cardWidth, height: cardHeight } = getStatsCardDimensions(c)
-  const trophyWidth = 650
-  const renderTopCard = (card) =>
-    `<img src="${card.src}" alt="${card.alt}" width="${cardWidth}" height="${cardHeight}" />`
-  const renderTrophyCard = (card) =>
-    `<img src="${card.src}" alt="${card.alt}" width="${trophyWidth}" />`
-  const topRowCards = [mainCard, languageCard].filter(Boolean)
-  const topRow = topRowCards.length === 2
-    ? buildAlignedBlock('center', topRowCards.map(renderTopCard).join('\n'))
-    : topRowCards.length === 1
-      ? buildAlignedBlock('center', renderTopCard(topRowCards[0]))
-      : ''
-  const bottomRow = trophyCard
-    ? buildAlignedBlock('center', renderTrophyCard(trophyCard))
-    : ''
+  const statsOrder = normalizeGitStatsOrder(c.statsOrder)
+  const statsRowGap = '<br />'
+  const statsCardGap = '&nbsp;&nbsp;'
+  const streakWidth = Math.round(cardWidth * 1.08)
+  const buildStatsRow = (content) => buildAlignedBlock('center', content)
+  const cardsById = {
+    main: c.showMainStats !== false
+      ? {
+          id: 'main',
+          pairable: true,
+          markup: `<img src="${buildStatsUrl(c)}" alt="GitHub Stats" width="${cardWidth}" height="${cardHeight}" />`,
+        }
+      : null,
+    languages: c.showLanguageStats !== false
+      ? {
+          id: 'languages',
+          pairable: true,
+          markup: `<img src="${buildLanguageStatsUrl(c)}" alt="Top Languages" width="${cardWidth}" height="${cardHeight}" />`,
+        }
+      : null,
+    streak: c.showStreakStats !== false
+      ? {
+          id: 'streak',
+          pairable: false,
+          markup: `<img src="${buildStreakUrl(c)}" alt="GitHub Streak Stats" width="${streakWidth}" />`,
+        }
+      : null,
+    activity: c.showActivityGraph !== false
+      ? {
+          id: 'activity',
+          pairable: false,
+          markup: `<img src="${buildActivityUrl(c)}" alt="GitHub Activity Graph" />`,
+        }
+      : null,
+    trophies: c.showTrophyStats !== false
+      ? {
+          id: 'trophies',
+          pairable: false,
+          markup: `<img src="${buildTrophyStatsUrl(c)}" alt="GitHub Trophies" width="650" />`,
+        }
+      : null,
+  }
+  const orderedCards = statsOrder
+    .map((cardId) => cardsById[cardId] ?? null)
+    .filter(Boolean)
 
-  return buildAlignedBlock(
-    'center',
-    [topRow, topRow && bottomRow ? '<br />' : '', bottomRow].filter(Boolean).join('\n'),
-  )
+  if (!orderedCards.length) return 'Enable at least one GitHub card.'
+
+  const rows = []
+
+  for (let index = 0; index < orderedCards.length; index += 1) {
+    const card = orderedCards[index]
+    const nextCard = orderedCards[index + 1]
+
+    if (card.pairable && nextCard?.pairable) {
+      rows.push(
+        buildStatsRow([card.markup, statsCardGap, nextCard.markup].join('')),
+      )
+      index += 1
+      continue
+    }
+
+    rows.push(buildStatsRow(card.markup))
+  }
+
+  return rows.join(`\n${statsRowGap}\n`)
+}
+
+const streakBlock = (c) => {
+  const { width: cardWidth } = getStatsCardDimensions(c)
+  const streakUrl = buildStreakUrl(c)
+  const img = `<img src="${streakUrl}" alt="GitHub Streak Stats" width="${Math.round(cardWidth * 1.08)}" />`
+  return buildAlignedBlock('center', img)
+}
+
+const activityBlock = (c) => {
+  const activityUrl = buildActivityUrl(c)
+  const img = `<img src="${activityUrl}" alt="GitHub Activity Graph" />`
+  return buildAlignedBlock('center', img)
+}
+
+const badgesBlock = (c) => {
+  const items = c.items ?? []
+  if (!items.length) return 'Add some badges to display.'
+  const align = getContentAlign(c.align, 'left')
+  
+  const badges = items.map((badge) => {
+    const username = c.username || 'BrandonBlkk'
+    const color = badge.color || '58a6ff'
+    const style = badge.style || 'for-the-badge'
+    
+    switch (badge.type) {
+      case 'profile-views':
+        return `<img src="https://komarev.com/ghpvc/?username=${username}&color=${color}&style=${style}&label=${encodeURIComponent(badge.label || 'Profile Views')}" alt="Profile Views" />`
+      case 'followers':
+        return `<img src="https://img.shields.io/github/followers/${username}?label=${encodeURIComponent(badge.label || 'Followers')}&style=${style}&color=${color}" alt="Followers" />`
+      case 'stars':
+        return `<img src="https://img.shields.io/github/stars/${username}?label=${encodeURIComponent(badge.label || 'Stars')}&style=${style}&color=${color}" alt="Stars" />`
+      case 'repos':
+        return `<img src="https://badges.frapsoft.com/os/v2/open-source.svg?v=103" alt="Open Source" />`
+      case 'custom':
+        return `<img src="https://img.shields.io/static/v1?label=${encodeURIComponent(badge.label || 'Badge')}&message=${encodeURIComponent(badge.message || 'Value')}&color=${color}&style=${style}" alt="${badge.label || 'Custom Badge'}" />`
+      default:
+        return `<img src="https://img.shields.io/static/v1?label=${encodeURIComponent(badge.label || 'Badge')}&message=${encodeURIComponent(badge.message || '')}&color=${color}&style=${style}" alt="${badge.label}" />`
+    }
+  }).join('\n')
+  
+  return buildAlignedBlock(align, badges)
+}
+
+const reposBlock = (c) => {
+  const username = c.username || 'BrandonBlkk'
+  const repos = c.repos ?? []
+  const align = getContentAlign(c.align, 'center')
+  
+  if (!repos.length) {
+    return buildAlignedBlock(align, `<p><em>Add pinned repository names to display them here.</em></p>`)
+  }
+  
+  const repoCards = repos.map((repo) => {
+    const repoName = typeof repo === 'string' ? repo : repo.name
+    return `<a href="https://github.com/${username}/${repoName}"><img src="https://github-readme-stats-delta-eight-12.vercel.app/api/pin/?username=${username}&repo=${repoName}&theme=${c.theme || 'dark'}&hide_border=${c.hideBorder !== false}" alt="${repoName}" /></a>`
+  }).join('\n')
+  
+  return buildAlignedBlock(align, repoCards)
+}
+
+const snippetBlock = (c) => {
+  const type = c.type || 'currently-learning'
+  const items = c.items ?? []
+  const align = getContentAlign(c.align, 'left')
+  
+  const SNIPPET_TITLES = {
+    'currently-learning': 'Currently Learning',
+    'currently-working': 'Currently Working On',
+    'fun-facts': 'Fun Facts',
+    'ask-me-about': 'Ask Me About',
+    'how-to-reach': 'How to Reach Me',
+    'pronouns': 'Pronouns',
+    'goals': 'Goals for This Year',
+  }
+  
+  const title = SNIPPET_TITLES[type] || 'Info'
+  const emoji = {
+    'currently-learning': '📚',
+    'currently-working': '🔭',
+    'fun-facts': '⚡',
+    'ask-me-about': '💬',
+    'how-to-reach': '📫',
+    'pronouns': '😄',
+    'goals': '🎯',
+  }[type] || '📌'
+  
+  if (!items.length) {
+    return `**${emoji} ${title}:** _Add some items..._`
+  }
+  
+  const formattedItems = items.map((item) => `\`${item}\``).join(', ')
+  const line = `**${emoji} ${title}:** ${formattedItems}`
+  
+  if (align === 'left') return line
+  return `<p align="${align}">${line}</p>`
 }
 
 const skillsBlock = (c) => {
@@ -339,6 +524,11 @@ export const generateMarkdown = (sections) =>
       switch (s.type) {
         case 'header': return headerBlock(c)
         case 'stats': return statsBlock(c)
+        case 'streak': return streakBlock(c)
+        case 'activity': return activityBlock(c)
+        case 'badges': return badgesBlock(c)
+        case 'repos': return reposBlock(c)
+        case 'snippet': return snippetBlock(c)
         case 'skills': return skillsBlock(c)
         case 'socials': return socialsBlock(c)
         case 'about': return aboutBlock(c)

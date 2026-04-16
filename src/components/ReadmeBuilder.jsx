@@ -26,6 +26,7 @@ import EmptyState from './readme-builder/EmptyState'
 import GithubModeToggle from './readme-builder/GithubModeToggle'
 import { PENDING_TEMPLATE_KEY, PENDING_TEMPLATE_UPDATE_KEY } from '../constants/templateFlow'
 import { normalizeTemplatePayload } from '../utils/templatePayload'
+import { normalizeGitStatsOrder, normalizeGitStatsSections } from '../utils/gitStats'
 import { DEFAULT_PROFILE, getResolvedProfile, useProfileStore } from '../stores/profileStore'
 import {
   generateMarkdown,
@@ -126,7 +127,7 @@ const applyProfileDefaultsToSections = (
       }
     }
 
-    if (section.type === 'stats') {
+    if (section.type === 'stats' || section.type === 'streak' || section.type === 'activity' || section.type === 'badges' || section.type === 'repos') {
       const nextUsername = normalizeTextValue(profileDefaults.githubUser) || DEFAULT_PROFILE.githubUser
       const currentUsername = normalizeTextValue(section.content?.username)
       const shouldReplace = shouldReplaceWithProfileDefault(
@@ -174,7 +175,10 @@ const BASE_TEMPLATE_CONTENT = {
     theme: 'transparent',
     showMainStats: true,
     showLanguageStats: true,
+    showStreakStats: true,
+    showActivityGraph: true,
     showTrophyStats: true,
+    statsOrder: normalizeGitStatsOrder(['main', 'languages', 'streak', 'activity', 'trophies']),
     showIcons: true,
     hideBorder: true,
     includeAllCommits: false,
@@ -187,6 +191,68 @@ const BASE_TEMPLATE_CONTENT = {
     borderRadius: 8,
     cardWidth: 420,
     lineHeight: 28,
+    streakTheme: 'dark',
+    streakHideBorder: true,
+    streakBgColor: '#171f2b',
+    streakStrokeColor: '#58a6ff',
+    streakRingColor: '#58a6ff',
+    streakFireColor: '#fbbf24',
+    streakCurrStreakColor: '#58a6ff',
+    streakSideNumColor: '#c9d1d9',
+    streakSideLabelsColor: '#8b949e',
+    streakDateColor: '#8b949e',
+    streakBorderRadius: 8,
+    activityTheme: 'github-compact',
+    activityBgColor: '#171f2b',
+    activityLineColor: '#58a6ff',
+    activityPointColor: '#58a6ff',
+    activityAreaColor: '#58a6ff',
+    activityHideBorder: true,
+    activityHideGrid: false,
+    activityShowArea: false,
+    activityRadius: 8,
+  },
+  streak: {
+    theme: 'dark',
+    hideBorder: true,
+    bgColor: '#171f2b',
+    strokeColor: '#58a6ff',
+    ringColor: '#58a6ff',
+    fireColor: '#fbbf24',
+    currStreakColor: '#58a6ff',
+    sideNumColor: '#c9d1d9',
+    sideLabelsColor: '#8b949e',
+    dateColor: '#8b949e',
+    borderRadius: 8,
+  },
+  activity: {
+    theme: 'github-compact',
+    bgColor: '#171f2b',
+    lineColor: '#58a6ff',
+    pointColor: '#58a6ff',
+    areaColor: '#58a6ff',
+    hideBorder: true,
+    hideGrid: false,
+    radius: 8,
+  },
+  badges: {
+    items: [
+      { type: 'profile-views', label: 'Profile Views', color: '58a6ff' },
+      { type: 'followers', label: 'Followers', color: '22c55e' },
+    ],
+    align: 'left',
+  },
+  repos: {
+    count: 4,
+    showStars: true,
+    showForks: true,
+    showDescription: true,
+    align: 'center',
+  },
+  snippet: {
+    type: 'currently-learning',
+    items: ['Next.js', 'GraphQL', 'Rust'],
+    align: 'left',
   },
   skills: {
     items: ['react', 'typescript', 'tailwindcss', 'vite', 'nodedotjs'],
@@ -226,13 +292,32 @@ const getTemplateContent = () => {
       ...clone(BASE_TEMPLATE_CONTENT.stats),
       username: githubUser,
     },
+    streak: {
+      ...clone(BASE_TEMPLATE_CONTENT.streak),
+      username: githubUser,
+    },
+    activity: {
+      ...clone(BASE_TEMPLATE_CONTENT.activity),
+      username: githubUser,
+    },
+    badges: {
+      ...clone(BASE_TEMPLATE_CONTENT.badges),
+      username: githubUser,
+    },
+    repos: {
+      ...clone(BASE_TEMPLATE_CONTENT.repos),
+      username: githubUser,
+    },
   }
 }
 
 const SECTION_LIBRARY = [
   { type: 'header', label: 'Header', description: 'Name, tagline, and key links.' },
   { type: 'about', label: 'About', description: 'Short bio or mission statement.' },
-  { type: 'stats', label: 'GitHub Stats', description: 'Live stats card with theming controls.' },
+  { type: 'stats', label: 'Git Stats', description: 'Main stats, streak, activity graph, and trophies in one section.' },
+  { type: 'badges', label: 'Custom Badges', description: 'Profile views, followers, and custom badges.' },
+  { type: 'repos', label: 'Pinned Repos', description: 'Showcase your pinned GitHub repositories.' },
+  { type: 'snippet', label: 'Quick Snippets', description: 'Currently learning, working on, fun facts.' },
   { type: 'skills', label: 'Skills Icons', description: 'Simple Icons tech stack strip.' },
   { type: 'socials', label: 'Social Links', description: 'Primary links and profiles.' },
   { type: 'text', label: 'Text Block', description: 'Custom text with size and alignment.' },
@@ -259,13 +344,19 @@ const getDefaultSections = () => [
   createSection('header'),
   createTextTitleSection('About'),
   createSection('about'),
-  createTextTitleSection('Stats'),
+  createTextTitleSection('Git Stats'),
   createSection('stats'),
   createTextTitleSection('Tech Stack'),
   createSection('skills'),
   createTextTitleSection('Socials'),
   createSection('socials'),
 ]
+
+const normalizeBuilderSections = (sections) =>
+  normalizeGitStatsSections(sections, {
+    defaultStatsContent: getTemplateContent().stats,
+    titleText: 'Git Stats',
+  })
 
 const moveItem = (list, fromIndex, toIndex) => {
   const next = [...list]
@@ -287,13 +378,13 @@ const useSectionStore = create(
       setPreviewTheme: (theme) => set({ previewTheme: theme }),
       addSection: (type) =>
         set((state) => ({
-          sections: [
+          sections: normalizeBuilderSections([
             ...state.sections,
             ...(SECTION_TITLE_MAP[type]
               ? [createTextTitleSection(SECTION_TITLE_MAP[type])]
               : []),
             createSection(type),
-          ],
+          ]),
         })),
       removeSection: (id) =>
         set((state) => ({
@@ -307,7 +398,7 @@ const useSectionStore = create(
               : section,
           ),
         })),
-      setSections: (sections) => set({ sections }),
+      setSections: (sections) => set({ sections: normalizeBuilderSections(sections) }),
       moveSection: (activeId, overId) => {
         const { sections } = get()
         const fromIndex = sections.findIndex((section) => section.id === activeId)
@@ -376,12 +467,26 @@ const useSectionStore = create(
         syncedWebsite: state.syncedWebsite,
         syncedLocation: state.syncedLocation,
       }),
+      merge: (persistedState, currentState) => {
+        const nextState = {
+          ...currentState,
+          ...(persistedState ?? {}),
+        }
+
+        return {
+          ...nextState,
+          sections: normalizeBuilderSections(nextState.sections ?? currentState.sections),
+        }
+      },
     },
   ),
 )
 
 const SECTION_TITLE_MAP = {
-  stats: 'Stats',
+  stats: 'Git Stats',
+  badges: 'Badges',
+  repos: 'Pinned Repos',
+  snippet: 'Quick Info',
   skills: 'Tech Stack',
   socials: 'Socials',
   about: 'About',
@@ -402,6 +507,11 @@ const SECTION_PILL_BASE =
 const SECTION_PILL_VARIANTS = {
   header: 'text-[#a78bfa] border-[rgba(167,139,250,0.3)] bg-[rgba(167,139,250,0.08)]',
   stats: 'text-[#34d399] border-[rgba(52,211,153,0.3)] bg-[rgba(52,211,153,0.08)]',
+  streak: 'text-[#f97316] border-[rgba(249,115,22,0.3)] bg-[rgba(249,115,22,0.08)]',
+  activity: 'text-[#22d3ee] border-[rgba(34,211,238,0.3)] bg-[rgba(34,211,238,0.08)]',
+  badges: 'text-[#a855f7] border-[rgba(168,85,247,0.3)] bg-[rgba(168,85,247,0.08)]',
+  repos: 'text-[#10b981] border-[rgba(16,185,129,0.3)] bg-[rgba(16,185,129,0.08)]',
+  snippet: 'text-[#ec4899] border-[rgba(236,72,153,0.3)] bg-[rgba(236,72,153,0.08)]',
   skills: 'text-[#fbbf24] border-[rgba(251,191,36,0.3)] bg-[rgba(251,191,36,0.08)]',
   socials: 'text-[#60a5fa] border-[rgba(96,165,250,0.3)] bg-[rgba(96,165,250,0.08)]',
   about: 'text-[#f472b6] border-[rgba(244,114,182,0.3)] bg-[rgba(244,114,182,0.08)]',
@@ -458,6 +568,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
     }
   })
   const sectionCardRefs = useRef(new Map())
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 4 },
@@ -604,7 +715,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
           if (locationMatch) location = locationMatch[1].trim()
 
           const websiteMatch = part.match(
-            /<a\s+href="([^"]+)"[^>]*>\s*<img[^>]*>\s*<\/a>|\[\!\[[^\]]*\]\([^)]+\)\]\(([^)]+)\)|\[Website\]\(([^)]+)\)/i,
+            /<a\s+href="([^"]+)"[^>]*>\s*<img[^>]*>\s*<\/a>|\[!\[[^\]]*\]\([^)]+\)\]\(([^)]+)\)|\[Website\]\(([^)]+)\)/i,
           )
           if (websiteMatch) website = (websiteMatch[1] ?? websiteMatch[2] ?? websiteMatch[3] ?? '').trim()
         })
@@ -647,6 +758,83 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
         .replace(/&nbsp;/gi, ' ')
         .trim()
       return { tag, align, text, divider }
+    }
+
+    const collectImageUrls = (value) => {
+      const urls = []
+      const markdownImageRegex = /!\[[^\]]*\]\(([^)]+)\)/g
+      let markdownMatch = markdownImageRegex.exec(value)
+      while (markdownMatch) {
+        urls.push(markdownMatch[1].trim())
+        markdownMatch = markdownImageRegex.exec(value)
+      }
+
+      const htmlImageRegex = /<img[^>]*src="([^"]+)"/gi
+      let htmlMatch = htmlImageRegex.exec(value)
+      while (htmlMatch) {
+        urls.push(htmlMatch[1].trim())
+        htmlMatch = htmlImageRegex.exec(value)
+      }
+
+      return urls
+    }
+
+    const parseAlignFromHtml = (value) => {
+      const match = String(value ?? '').match(/<(?:div|p)\s+[^>]*align="(left|center|right)"/i)
+      return match?.[1]?.toLowerCase() ?? ''
+    }
+
+    const parseIconSpacing = (value) => {
+      const wrappedMatch = String(value ?? '').match(/<span[^>]*>((?:&nbsp;)+)<\/span>/i)
+      if (wrappedMatch) {
+        return (wrappedMatch[1].match(/&nbsp;/g) || []).length
+      }
+
+      const inlineMatch = String(value ?? '').match(/((?:&nbsp;){1,6})/i)
+      return inlineMatch ? (inlineMatch[1].match(/&nbsp;/g) || []).length : undefined
+    }
+
+    const collectSkillSlugs = (value) => {
+      const urls = collectImageUrls(value)
+      const slugs = []
+
+      urls.forEach((urlValue) => {
+        try {
+          const url = new URL(urlValue)
+          const iconQuery = url.searchParams.get('i') ?? ''
+          if (!iconQuery) return
+
+          iconQuery
+            .split(',')
+            .map((slug) => slug.trim().toLowerCase())
+            .filter(Boolean)
+            .forEach((slug) => slugs.push(slug))
+        } catch {
+          const match = String(urlValue).match(/(?:cdn\.simpleicons\.org\/|skillicons\.dev\/icons\?i=)([a-z0-9,-]+)/i)
+          if (!match) return
+
+          match[1]
+            .split(',')
+            .map((slug) => slug.trim().toLowerCase())
+            .filter(Boolean)
+            .forEach((slug) => slugs.push(slug))
+        }
+      })
+
+      return Array.from(new Set(slugs))
+    }
+
+    const applyColorParam = (params, field, key, target) => {
+      if (!params.has(key)) return
+      const value = params.get(key) ?? ''
+      const clean = value.replace('#', '').trim()
+      if (clean) target[field] = `#${clean}`
+    }
+
+    const applyNumberParam = (params, field, key, target) => {
+      if (!params.has(key)) return
+      const value = Number(params.get(key))
+      if (!Number.isNaN(value)) target[field] = value
     }
 
     const blocks = []
@@ -793,23 +981,15 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
       }
 
       if (block.level === 2) {
-        if (titleLower === 'stats' || titleLower === 'github stats') {
+        if (titleLower === 'stats' || titleLower === 'github stats' || titleLower === 'git stats') {
           addTextTitle(title)
           const base = baseContent('stats')
-          const next = { ...base }
-          const imageUrls = []
-          const markdownImageRegex = /!\[[^\]]*\]\(([^)]+)\)/g
-          let markdownMatch = markdownImageRegex.exec(content)
-          while (markdownMatch) {
-            imageUrls.push(markdownMatch[1].trim())
-            markdownMatch = markdownImageRegex.exec(content)
+          const next = {
+            ...base,
+            showStreakStats: false,
+            showActivityGraph: false,
           }
-          const htmlImageRegex = /<img[^>]*src="([^"]+)"/gi
-          let htmlMatch = htmlImageRegex.exec(content)
-          while (htmlMatch) {
-            imageUrls.push(htmlMatch[1].trim())
-            htmlMatch = htmlImageRegex.exec(content)
-          }
+          const imageUrls = collectImageUrls(content)
 
           const statsUrl = imageUrls.find((urlValue) => {
             const lower = urlValue.toLowerCase()
@@ -821,6 +1001,12 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
           const languageUrl = imageUrls.find((urlValue) =>
             urlValue.toLowerCase().includes('github-readme-stats-delta-eight-12.vercel.app/api/top-langs'),
           )
+          const streakUrl = imageUrls.find((urlValue) =>
+            urlValue.toLowerCase().includes('github-readme-streak-stats.herokuapp.com'),
+          )
+          const activityUrl = imageUrls.find((urlValue) =>
+            urlValue.toLowerCase().includes('github-readme-activity-graph.vercel.app/graph'),
+          )
           const trophyUrl = imageUrls.find((urlValue) => {
             const lower = urlValue.toLowerCase()
             return (
@@ -831,11 +1017,42 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
           })
           const hasStatsCardUrl = Boolean(statsUrl || languageUrl)
           const referenceUrl = statsUrl || languageUrl || trophyUrl
+          const statsOrderFromMarkdown = normalizeGitStatsOrder(
+            imageUrls.flatMap((urlValue) => {
+              const lower = urlValue.toLowerCase()
+              if (
+                lower.includes('github-readme-stats-delta-eight-12.vercel.app/api')
+                && !lower.includes('/api/top-langs')
+              ) {
+                return ['main']
+              }
+              if (lower.includes('github-readme-stats-delta-eight-12.vercel.app/api/top-langs')) {
+                return ['languages']
+              }
+              if (lower.includes('github-readme-streak-stats.herokuapp.com')) {
+                return ['streak']
+              }
+              if (lower.includes('github-readme-activity-graph.vercel.app/graph')) {
+                return ['activity']
+              }
+              if (
+                lower.includes('github-profile-trophy.screw-hand.vercel.app')
+                || lower.includes('github-profile-trophy-alpha-ecru.vercel.app')
+                || lower.includes('github-profile-trophy.vercel.app')
+              ) {
+                return ['trophies']
+              }
+              return []
+            }),
+          )
 
-          if (statsUrl || languageUrl || trophyUrl) {
+          if (statsUrl || languageUrl || streakUrl || activityUrl || trophyUrl) {
             next.showMainStats = Boolean(statsUrl)
             next.showLanguageStats = Boolean(languageUrl)
+            next.showStreakStats = Boolean(streakUrl)
+            next.showActivityGraph = Boolean(activityUrl)
             next.showTrophyStats = Boolean(trophyUrl)
+            next.statsOrder = statsOrderFromMarkdown
           }
 
           if (referenceUrl) {
@@ -852,55 +1069,140 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
                 if (params.has('count_private'))
                   next.countPrivate = params.get('count_private') === 'true'
                 if (params.has('rank_icon')) next.rankIcon = params.get('rank_icon') ?? ''
-
-                const applyColor = (field, key) => {
-                  if (!params.has(key)) return
-                  const value = params.get(key) ?? ''
-                  const clean = value.replace('#', '').trim()
-                  if (clean) next[field] = `#${clean}`
-                }
-                applyColor('bgColor', 'bg_color')
-                applyColor('titleColor', 'title_color')
-                applyColor('textColor', 'text_color')
-                applyColor('iconColor', 'icon_color')
-
-                const applyNumber = (field, key) => {
-                  if (!params.has(key)) return
-                  const value = Number(params.get(key))
-                  if (!Number.isNaN(value)) next[field] = value
-                }
-                applyNumber('borderRadius', 'border_radius')
-                applyNumber('cardWidth', 'card_width')
-                applyNumber('lineHeight', 'line_height')
+                applyColorParam(params, 'bgColor', 'bg_color', next)
+                applyColorParam(params, 'titleColor', 'title_color', next)
+                applyColorParam(params, 'textColor', 'text_color', next)
+                applyColorParam(params, 'iconColor', 'icon_color', next)
+                applyNumberParam(params, 'borderRadius', 'border_radius', next)
+                applyNumberParam(params, 'cardWidth', 'card_width', next)
+                applyNumberParam(params, 'lineHeight', 'line_height', next)
               }
             } catch {
               // Ignore invalid Reference URLs
             }
           }
+
+          if (streakUrl) {
+            try {
+              const url = new URL(streakUrl)
+              const params = url.searchParams
+              if (params.has('user')) next.username = params.get('user') ?? next.username
+              if (params.has('theme')) next.streakTheme = params.get('theme') ?? ''
+              if (params.has('hide_border')) next.streakHideBorder = params.get('hide_border') === 'true'
+              applyColorParam(params, 'streakBgColor', 'background', next)
+              applyColorParam(params, 'streakStrokeColor', 'stroke', next)
+              applyColorParam(params, 'streakRingColor', 'ring', next)
+              applyColorParam(params, 'streakFireColor', 'fire', next)
+              applyColorParam(params, 'streakCurrStreakColor', 'currStreakNum', next)
+              applyColorParam(params, 'streakSideNumColor', 'sideNums', next)
+              applyColorParam(params, 'streakSideLabelsColor', 'sideLabels', next)
+              applyColorParam(params, 'streakDateColor', 'dates', next)
+              applyNumberParam(params, 'streakBorderRadius', 'border_radius', next)
+            } catch {
+              // Ignore invalid streak URLs
+            }
+          }
+
+          if (activityUrl) {
+            try {
+              const url = new URL(activityUrl)
+              const params = url.searchParams
+              if (params.has('username')) next.username = params.get('username') ?? next.username
+              if (params.has('theme')) next.activityTheme = params.get('theme') ?? ''
+              if (params.has('hide_border')) next.activityHideBorder = params.get('hide_border') === 'true'
+              if (params.has('hide_grid')) next.activityHideGrid = params.get('hide_grid') === 'true'
+              if (params.has('area')) next.activityShowArea = params.get('area') === 'true'
+              applyColorParam(params, 'activityBgColor', 'bg_color', next)
+              applyColorParam(params, 'activityLineColor', 'line', next)
+              applyColorParam(params, 'activityPointColor', 'point', next)
+              applyColorParam(params, 'activityAreaColor', 'area_color', next)
+              applyNumberParam(params, 'activityRadius', 'radius', next)
+            } catch {
+              // Ignore invalid activity URLs
+            }
+          }
+
           addSectionInt('stats', next)
+          continue
+        }
+
+        if (titleLower === 'streak stats') {
+          addTextTitle(title)
+          const base = baseContent('streak')
+          const next = { ...base }
+          const streakUrl = collectImageUrls(content).find((urlValue) =>
+            urlValue.toLowerCase().includes('github-readme-streak-stats.herokuapp.com'),
+          )
+
+          if (streakUrl) {
+            try {
+              const url = new URL(streakUrl)
+              const params = url.searchParams
+              if (params.has('user')) next.username = params.get('user') ?? ''
+              if (params.has('theme')) next.theme = params.get('theme') ?? ''
+              if (params.has('hide_border')) next.hideBorder = params.get('hide_border') === 'true'
+              applyColorParam(params, 'bgColor', 'background', next)
+              applyColorParam(params, 'strokeColor', 'stroke', next)
+              applyColorParam(params, 'ringColor', 'ring', next)
+              applyColorParam(params, 'fireColor', 'fire', next)
+              applyColorParam(params, 'currStreakColor', 'currStreakNum', next)
+              applyColorParam(params, 'sideNumColor', 'sideNums', next)
+              applyColorParam(params, 'sideLabelsColor', 'sideLabels', next)
+              applyColorParam(params, 'dateColor', 'dates', next)
+              applyNumberParam(params, 'borderRadius', 'border_radius', next)
+            } catch {
+              // Ignore invalid streak URLs
+            }
+          }
+
+          addSectionInt('streak', next)
+          continue
+        }
+
+        if (titleLower === 'activity graph') {
+          addTextTitle(title)
+          const base = baseContent('activity')
+          const next = { ...base }
+          const activityUrl = collectImageUrls(content).find((urlValue) =>
+            urlValue.toLowerCase().includes('github-readme-activity-graph.vercel.app/graph'),
+          )
+
+          if (activityUrl) {
+            try {
+              const url = new URL(activityUrl)
+              const params = url.searchParams
+              if (params.has('username')) next.username = params.get('username') ?? ''
+              if (params.has('theme')) next.theme = params.get('theme') ?? ''
+              if (params.has('hide_border')) next.hideBorder = params.get('hide_border') === 'true'
+              if (params.has('hide_grid')) next.hideGrid = params.get('hide_grid') === 'true'
+              if (params.has('area')) next.area = params.get('area') === 'true'
+              applyColorParam(params, 'bgColor', 'bg_color', next)
+              applyColorParam(params, 'lineColor', 'line', next)
+              applyColorParam(params, 'pointColor', 'point', next)
+              applyColorParam(params, 'areaColor', 'area_color', next)
+              applyNumberParam(params, 'radius', 'radius', next)
+            } catch {
+              // Ignore invalid activity URLs
+            }
+          }
+
+          addSectionInt('activity', next)
           continue
         }
 
         if (titleLower === 'tech stack' || titleLower === 'skills' || titleLower === 'skills icons') {
           addTextTitle(title)
           const base = baseContent('skills')
-          const slugMatches = []
-          const regex = /(?:cdn\.simpleicons\.org\/|skillicons\.dev\/icons\?i=)([a-z0-9-]+)/gi
-          let match = regex.exec(content)
-          while (match) {
-            slugMatches.push(match[1])
-            match = regex.exec(content)
-          }
-          const unique = Array.from(new Set(slugMatches))
-          const sizeMatch = content.match(/<img[^>]*width="(\d+)"/i)
-          const spacingMatch = content.match(/<span>((?:&nbsp;)+)<\/span>/i)
-          const alignMatch = content.match(/<div[^>]*align="(left|center|right)"/i)
+          const unique = collectSkillSlugs(content)
+          const sizeMatch = content.match(/<img[^>]*(?:width|height)="(\d+)"/i)
+          const spacing = parseIconSpacing(content)
+          const align = parseAlignFromHtml(content)
           addSectionInt('skills', {
             ...base,
             items: unique,
             ...(sizeMatch ? { iconSize: Number(sizeMatch[1]) } : {}),
-            ...(spacingMatch ? { iconSpacing: (spacingMatch[1].match(/&nbsp;/g) || []).length } : {}),
-            ...(alignMatch ? { align: alignMatch[1].toLowerCase() } : {}),
+            ...(typeof spacing === 'number' ? { iconSpacing: spacing } : {}),
+            ...(align ? { align } : {}),
           })
           continue
         }
@@ -924,14 +1226,14 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
             }
           }
           const sizeMatch = content.match(/<img[^>]*width="(\d+)"/i)
-          const spacingMatch = content.match(/<span>((?:&nbsp;)+)<\/span>/i)
-          const alignMatch = content.match(/<div[^>]*align="(left|center|right)"/i)
+          const spacing = parseIconSpacing(content)
+          const align = parseAlignFromHtml(content)
           addSectionInt('socials', {
             ...base,
             links,
             ...(sizeMatch ? { iconSize: Number(sizeMatch[1]) } : {}),
-            ...(spacingMatch ? { iconSpacing: (spacingMatch[1].match(/&nbsp;/g) || []).length } : {}),
-            ...(alignMatch ? { align: alignMatch[1].toLowerCase() } : {}),
+            ...(typeof spacing === 'number' ? { iconSpacing: spacing } : {}),
+            ...(align ? { align } : {}),
           })
           continue
         }
@@ -1110,13 +1412,13 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
                 <EmptyState onQuickStart={handleQuickStart} />
               ) : (
                 <div className="flex flex-col gap-2">
-                  <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
-                    onDragCancel={handleDragCancel}
-                  >
+<DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDragCancel={handleDragCancel}
+              >
                     <SortableContext
                       items={sections.map((s) => s.id)}
                       strategy={verticalListSortingStrategy}
