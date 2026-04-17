@@ -568,6 +568,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
     }
   })
   const sectionCardRefs = useRef(new Map())
+  const builderColumnRef = useRef(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -606,6 +607,21 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
     return () => {
       document.body.style.cursor = ''
     }
+  }, [activeId])
+
+  // Allow mouse-wheel scrolling while dragging a section
+  useEffect(() => {
+    if (!activeId) return undefined
+    const container = builderColumnRef.current
+    if (!container) return undefined
+
+    const handleWheel = (e) => {
+      e.preventDefault()
+      container.scrollTop += e.deltaY * 5
+    }
+
+    container.addEventListener('wheel', handleWheel, { passive: false })
+    return () => container.removeEventListener('wheel', handleWheel)
   }, [activeId])
 
   useEffect(() => {
@@ -1344,6 +1360,7 @@ const ReadmeBuilder = ({ activePanel, onOpenProjectModal }) => {
       >
         {/* ── Builder Column ─────────────────── */}
         <div
+          ref={builderColumnRef}
           className={`relative border-b border-zinc-800 ${isEditorOpen ? 'block' : 'hidden'} lg:block lg:sticky lg:top-12.25 lg:h-[calc(100vh-49px)] lg:overflow-y-auto lg:border-b-0 lg:border-r [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-[3px] [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-track]:bg-transparent hover:[&::-webkit-scrollbar-thumb]:bg-zinc-700`}
         >
           <div className="p-4 sm:p-5">
