@@ -148,7 +148,7 @@ const Preview = ({
             className,
             theme.link,
             'hover:underline',
-            isRepoPinLink ? 'block mb-3 last:mb-0 sm:mb-0 sm:inline-block' : '',
+            isRepoPinLink ? 'block mb-3 last:mb-0 sm:mb-1 sm:last:mb-0 sm:inline-block' : '',
             isOnlyVisual ? 'select-none' : '',
             isInteractivePreview ? 'pointer-events-none' : '',
           ]
@@ -222,7 +222,15 @@ const Preview = ({
             height: Number.isFinite(numericHeight) && numericHeight > 0 ? `${numericHeight}px` : 'auto',
             maxWidth: 'none',
           }
-        : undefined
+        : isTechIcon
+          && Number.isFinite(numericHeight)
+          && numericHeight > 0
+          ? {
+              height: `${numericHeight}px`,
+              width: 'auto',
+              maxWidth: 'none',
+            }
+          : undefined
       const className = isTechIcon
         ? 'inline-block align-middle h-auto max-w-none'
         : isBadge

@@ -217,7 +217,7 @@ const StatsEditor = ({ section, updateSection, buildStatsUrl }) => {
             <Toggle label="Show Icons" checked={Boolean(c.showIcons)} onChange={(value) => updateStats({ showIcons: value })} />
             <Toggle label="Hide Border" checked={Boolean(c.hideBorder)} onChange={(value) => updateStats({ hideBorder: value })} />
             <Toggle label="All Commits" checked={Boolean(c.includeAllCommits)} onChange={(value) => updateStats({ includeAllCommits: value })} />
-            <Toggle label="Count Private" checked={Boolean(c.countPrivate)} onChange={(value) => updateStats({ countPrivate: value })} />
+            <Toggle label="Count Private" className='col-span-2' checked={Boolean(c.countPrivate)} onChange={(value) => updateStats({ countPrivate: value })} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <ColorField label="Title Color" value={c.titleColor ?? '#58a6ff'} onChange={(value) => updateStats({ titleColor: value })} />
@@ -280,12 +280,14 @@ const StatsEditor = ({ section, updateSection, buildStatsUrl }) => {
           </p>
         </div>
         <div className="grid gap-4">
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className="grid gap-2 sm:grid-cols-2">
             <Toggle label="Show Activity" checked={Boolean(c.showActivityGraph)} onChange={(value) => updateStats({ showActivityGraph: value })} />
             <Toggle label="Hide Border" checked={Boolean(c.activityHideBorder)} onChange={(value) => updateStats({ activityHideBorder: value })} />
-            <Toggle label="Hide Grid" checked={Boolean(c.activityHideGrid)} onChange={(value) => updateStats({ activityHideGrid: value })} />
           </div>
-          <Toggle label="Show Area" checked={Boolean(c.activityShowArea)} onChange={(value) => updateStats({ activityShowArea: value })} />
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Toggle label="Hide Grid" checked={Boolean(c.activityHideGrid)} onChange={(value) => updateStats({ activityHideGrid: value })} />
+            <Toggle label="Show Area" checked={Boolean(c.activityShowArea)} onChange={(value) => updateStats({ activityShowArea: value })} />
+          </div>
           <Field label="Theme">
             <select
               className={inputClass}
@@ -396,15 +398,15 @@ const SkillsEditor = ({ section, updateSection, techOptions, fallbackIcon }) => 
         <RangeField
           label="Icon Size"
           min={18}
-          max={40}
+          max={64}
           value={c.iconSize ?? 40}
           onChange={(v) => updateSection(section.id, { iconSize: v })}
         />
         <RangeField
           label="Icon Spacing"
           min={0}
-          max={6}
-          value={c.iconSpacing ?? 1}
+          max={20}
+          value={c.iconSpacing ?? 2}
           onChange={(v) => updateSection(section.id, { iconSpacing: v })}
         />
         <Field label="Alignment">
@@ -647,15 +649,15 @@ const addSocial = (icon) => {
         <RangeField
           label="Icon Size"
           min={18}
-          max={40}
+          max={64}
           value={c.iconSize ?? 40}
           onChange={(v) => updateSection(section.id, { iconSize: v })}
         />
         <RangeField
           label="Icon Spacing"
           min={0}
-          max={6}
-          value={c.iconSpacing ?? 1}
+          max={20}
+          value={c.iconSpacing ?? 2}
           onChange={(v) => updateSection(section.id, { iconSpacing: v })}
         />
         <Field label="Alignment">
@@ -995,7 +997,7 @@ const ReposEditor = ({ section, updateSection }) => {
       <Field label="Theme">
         <select
           className={inputClass}
-          value={c.theme ?? 'dark'}
+          value={c.theme ?? 'dracula'}
           onChange={(e) => updateSection(section.id, { theme: e.target.value })}
         >
           {['dark', 'transparent', 'tokyonight', 'radical', 'onedark', 'cobalt', 'nightowl', 'dracula'].map((t) => (
