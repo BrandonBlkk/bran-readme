@@ -14,6 +14,21 @@ const isPreviewAsset = (src = '') =>
     || src.includes('github-profile-trophy.screw-hand.vercel.app')
     || src.includes('github-profile-trophy-alpha-ecru.vercel.app')
     || src.includes('github-profile-trophy.vercel.app')
+    || src.includes('komarev.com')
+  )
+
+const isBadgeSrc = (src = '') =>
+  typeof src === 'string'
+  && (
+    src.includes('img.shields.io')
+    || src.includes('komarev.com')
+    || src.includes('badges.frapsoft.com')
+  )
+
+const hasBadgeChildren = (children) =>
+  React.Children.toArray(children).some((child) =>
+    React.isValidElement(child)
+    && isBadgeSrc(child.props?.src),
   )
 
 const isVisualOnlyNode = (node) => {
@@ -103,17 +118,30 @@ const Preview = ({
     h6: (props) => (
       <h6 className="mb-3 mt-5 text-[14px] font-semibold uppercase tracking-[0.04em]" {...props} />
     ),
-    div: ({ className = '', children, ...props }) => {
+    div: ({ className = '', children, style, align, ...props }) => {
       const isOnlyVisual = hasOnlyVisualChildren(children)
       const childNodes = React.Children.toArray(children)
       const isRepoPinsBlock = childNodes.some(isRepoPinNode)
+      const isBadgeBlock = hasBadgeChildren(children)
+      const badgeStyle = isBadgeBlock
+        ? { 
+            display: 'flex', 
+            flexWrap: 'wrap', 
+            gap: '4px', 
+            justifyContent: align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start',
+            ...style 
+          }
+        : style
       return (
         <div
           className={[
             className,
             isOnlyVisual ? 'select-none' : '',
             isRepoPinsBlock ? 'pt-3' : '',
+            isBadgeBlock ? 'items-center' : '',
           ].filter(Boolean).join(' ')}
+          style={badgeStyle}
+          align={align}
           {...props}
         >
           {children}
@@ -180,7 +208,7 @@ const Preview = ({
     img: ({ src = '', alt = '', width, height, ...props }) => {
       const isTechIcon = typeof src === 'string'
         && (src.includes('cdn.simpleicons.org') || src.includes('skillicons.dev'))
-      const isBadge = typeof src === 'string' && src.includes('img.shields.io')
+      const isBadge = isBadgeSrc(src)
       const isGitStats = typeof src === 'string'
         && (
           src.includes('github-readme-stats-delta-eight-12.vercel.app')
