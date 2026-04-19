@@ -1073,19 +1073,122 @@ const BadgesEditor = ({ section, updateSection }) => {
   )
 }
 
+const SortableRepo = ({ id, repo, index, updateRepo, removeRepo }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+  const [localValue, setLocalValue] = useState(repo)
+
+  React.useEffect(() => {
+    setLocalValue(repo)
+  }, [repo])
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  const handleBlur = () => {
+    const trimmed = localValue.trim()
+    if (trimmed && trimmed !== repo) {
+      updateRepo(index, trimmed)
+    } else if (!trimmed || trimmed === repo) {
+      setLocalValue(repo)
+    }
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.target.blur()
+    }
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center justify-between rounded-lg border px-3 py-2 ${
+        isDragging
+          ? 'z-50 border-blue-500 bg-zinc-900 opacity-80 shadow-lg'
+          : 'border-zinc-800 bg-zinc-950'
+      }`}
+    >
+      <div className="flex flex-1 items-center gap-3">
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          className={`flex h-6 w-6 items-center justify-center rounded-md hover:bg-zinc-800 text-zinc-500 transition-colors hover:text-zinc-300 ${
+            isDragging ? 'cursor-grabbing' : 'cursor-grab'
+          }`}
+          aria-label="Drag to reorder"
+        >
+          <GripVertical size={14} />
+        </button>
+        <input
+          value={localValue}
+          onChange={(e) => setLocalValue(e.target.value)}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          className="flex-1 bg-transparent text-[13px] text-zinc-300 outline-none focus:text-zinc-100"
+          placeholder="repository-name"
+        />
+      </div>
+      <button
+        type="button"
+        onClick={() => removeRepo(index)}
+        className="flex h-6 w-6 items-center justify-center rounded-md border border-zinc-800 text-zinc-500 transition-all duration-150 hover:border-red-500 hover:text-red-500 cursor-pointer ml-2"
+      >
+        <Trash2 size={12} />
+      </button>
+    </div>
+  )
+}
+
 const ReposEditor = ({ section, updateSection }) => {
   const c = section.content ?? {}
   const repos = c.repos ?? []
   const [newRepo, setNewRepo] = useState('')
   
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event
+    if (over && active.id !== over.id) {
+      const oldIndex = repos.indexOf(active.id)
+      const newIndex = repos.indexOf(over.id)
+      if (oldIndex !== -1 && newIndex !== -1) {
+        updateSection(section.id, { repos: arrayMove(repos, oldIndex, newIndex) })
+      }
+    }
+  }
+
   const addRepo = () => {
-    if (!newRepo.trim()) return
-    updateSection(section.id, { repos: [...repos, newRepo.trim()] })
+    const trimmed = newRepo.trim()
+    if (!trimmed) return
+    if (repos.includes(trimmed)) {
+      toast.error('Repository already exists')
+      return
+    }
+    updateSection(section.id, { repos: [...repos, trimmed] })
     setNewRepo('')
   }
   
   const removeRepo = (index) => {
     updateSection(section.id, { repos: repos.filter((_, i) => i !== index) })
+  }
+  
+  const updateRepo = (index, newValue) => {
+    if (repos.includes(newValue) && repos.indexOf(newValue) !== index) {
+      toast.error('Repository already exists')
+      return
+    }
+    const next = [...repos]
+    next[index] = newValue
+    updateSection(section.id, { repos: next })
   }
   
   return (
@@ -1140,18 +1243,20 @@ const ReposEditor = ({ section, updateSection }) => {
         </button>
       </div>
       <div className="grid gap-2">
-        {repos.map((repo, index) => (
-          <div key={index} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2">
-            <span className="text-[13px] text-zinc-300">{repo}</span>
-            <button
-              type="button"
-              onClick={() => removeRepo(index)}
-              className="flex h-6 w-6 items-center justify-center rounded-md border border-zinc-800 text-zinc-500 transition-all duration-150 hover:border-red-500 hover:text-red-500 cursor-pointer"
-            >
-              <Trash2 size={12} />
-            </button>
-          </div>
-        ))}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={repos} strategy={verticalListSortingStrategy}>
+            {repos.map((repo, index) => (
+              <SortableRepo
+                key={repo}
+                id={repo}
+                repo={repo}
+                index={index}
+                updateRepo={updateRepo}
+                removeRepo={removeRepo}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
       </div>
       {repos.length === 0 && (
         <p className="text-[11px] text-zinc-600">Add your pinned repository names (e.g., &quot;my-awesome-project&quot;)</p>
