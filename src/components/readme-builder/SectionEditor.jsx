@@ -1,5 +1,8 @@
 import React, { useMemo, useState } from 'react'
-import { ArrowDown, ArrowUp, Trash2 } from 'lucide-react'
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { ArrowDown, ArrowUp, Trash2, GripVertical } from 'lucide-react'
 import { toast } from 'sonner'
 import Toggle from '../Toggle'
 import { Field, RangeField, ColorField, inputClass, labelClass } from './FormFields'
@@ -100,6 +103,49 @@ const AboutEditor = ({ section, updateSection }) => {
   )
 }
 
+const SortableStatCard = ({ id, card, isEnabled }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center justify-between rounded-lg border px-3 py-2 ${
+        isDragging
+          ? 'z-50 border-blue-500 bg-zinc-900 opacity-80 shadow-lg'
+          : 'border-zinc-800 bg-zinc-900'
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          className={`flex h-7 w-7 items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-500 transition-all duration-150 ${
+            isDragging ? 'cursor-grabbing' : 'cursor-grab'
+          }`}
+          aria-label="Drag to reorder"
+        >
+          <GripVertical size={14} />
+        </button>
+        <div>
+          <p className="text-[12px] font-semibold text-zinc-100">
+            {card.label}
+          </p>
+          <p className="mt-0.5 text-[10px] uppercase tracking-[0.08em] text-zinc-500">
+            {isEnabled ? 'Visible' : 'Hidden'}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const StatsEditor = ({ section, updateSection, buildStatsUrl }) => {
   const c = section.content ?? {}
   const statsUrl = buildStatsUrl(c)
@@ -107,16 +153,21 @@ const StatsEditor = ({ section, updateSection, buildStatsUrl }) => {
   const activityUrl = buildActivityUrl(c)
   const statsOrder = normalizeGitStatsOrder(c.statsOrder)
   const updateStats = (updates) => updateSection(section.id, updates)
-  const moveCard = (cardId, direction) => {
-    const currentIndex = statsOrder.indexOf(cardId)
-    if (currentIndex === -1) return
 
-    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
-    if (targetIndex < 0 || targetIndex >= statsOrder.length) return
-
-    updateStats({
-      statsOrder: moveListItem(statsOrder, currentIndex, targetIndex),
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
     })
+  )
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event
+    if (over && active.id !== over.id) {
+      const oldIndex = statsOrder.indexOf(active.id)
+      const newIndex = statsOrder.indexOf(over.id)
+      updateStats({ statsOrder: arrayMove(statsOrder, oldIndex, newIndex) })
+    }
   }
 
   return (
@@ -136,48 +187,27 @@ const StatsEditor = ({ section, updateSection, buildStatsUrl }) => {
             Reorder the Git stats cards inside this one section.
           </p>
         </div>
-        <div className="grid gap-2">
-          {statsOrder.map((cardId, index) => {
-            const card = GIT_STATS_CARD_DEFINITIONS.find((item) => item.id === cardId)
-            if (!card) return null
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={statsOrder} strategy={verticalListSortingStrategy}>
+            <div className="grid gap-2">
+              {statsOrder.map((cardId, index) => {
+                const card = GIT_STATS_CARD_DEFINITIONS.find((item) => item.id === cardId)
+                if (!card) return null
 
-            const isEnabled = isGitStatsCardEnabled(c, card.toggleKey)
+                const isEnabled = isGitStatsCardEnabled(c, card.toggleKey)
 
-            return (
-              <div
-                key={card.id}
-                className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2"
-              >
-                <div>
-                  <p className="text-[12px] font-semibold text-zinc-100">
-                    {card.label}
-                  </p>
-                  <p className="mt-0.5 text-[10px] uppercase tracking-[0.08em] text-zinc-500">
-                    {isEnabled ? 'Visible' : 'Hidden'}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => moveCard(card.id, 'up')}
-                    disabled={index === 0}
-                    className="flex h-8 w-8 items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer select-none"
-                  >
-                    <ArrowUp size={14} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => moveCard(card.id, 'down')}
-                    disabled={index === statsOrder.length - 1}
-                    className="flex h-8 w-8 items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-400 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer select-none"
-                  >
-                    <ArrowDown size={14} />
-                  </button>
-                </div>
-              </div>
-            )
-          })}
-        </div>
+                return (
+                  <SortableStatCard
+                    key={card.id}
+                    id={card.id}
+                    card={card}
+                    isEnabled={isEnabled}
+                  />
+                )
+              })}
+            </div>
+          </SortableContext>
+        </DndContext>
       </div>
 
       <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-3.5">
@@ -855,13 +885,112 @@ const BADGE_TYPES = [
 
 const BADGE_STYLES = ['for-the-badge', 'flat', 'flat-square', 'plastic', 'social']
 
+const SortableBadge = ({ id, badge, index, updateBadge, removeBadge }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`grid gap-2 rounded-lg border p-3 ${
+        isDragging
+          ? 'z-50 border-blue-500 bg-zinc-900 opacity-80 shadow-lg'
+          : 'border-zinc-800 bg-zinc-950'
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            className={`flex h-7 w-7 items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-zinc-500 transition-all duration-150 ${
+              isDragging ? 'cursor-grabbing' : 'cursor-grab'
+            }`}
+            aria-label="Drag to reorder"
+          >
+            <GripVertical size={14} />
+          </button>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-400">{badge.type}</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => removeBadge(index)}
+          className="flex h-6 w-6 items-center justify-center rounded-md border border-zinc-800 text-zinc-500 transition-all duration-150 hover:border-red-500 hover:text-red-500 cursor-pointer"
+        >
+          <Trash2 size={12} />
+        </button>
+      </div>
+      <input
+        className={inputClass}
+        value={badge.label ?? ''}
+        onChange={(e) => updateBadge(index, 'label', e.target.value)}
+        placeholder="Label"
+      />
+      {badge.type === 'custom' && (
+        <input
+          className={inputClass}
+          value={badge.message ?? ''}
+          onChange={(e) => updateBadge(index, 'message', e.target.value)}
+          placeholder="Message/Value"
+        />
+      )}
+      <div className="grid grid-cols-2 gap-2">
+        <ColorField label="Color" value={`#${badge.color ?? '58a6ff'}`} onChange={(v) => updateBadge(index, 'color', v.replace('#', ''))} />
+        <Field label="Style">
+          <select
+            className={inputClass}
+            value={badge.style ?? 'for-the-badge'}
+            onChange={(e) => updateBadge(index, 'style', e.target.value)}
+          >
+            {BADGE_STYLES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </Field>
+      </div>
+    </div>
+  )
+}
+
 const BadgesEditor = ({ section, updateSection }) => {
   const c = section.content ?? {}
   const items = c.items ?? []
   const [selectedType, setSelectedType] = useState('profile-views')
   
+  React.useEffect(() => {
+    if (items.some(b => !b.id)) {
+      const newItems = items.map(b => b.id ? b : { ...b, id: Math.random().toString(36).substring(7) })
+      updateSection(section.id, { items: newItems })
+    }
+  }, [items, section.id, updateSection])
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event
+    if (over && active.id !== over.id) {
+      const oldIndex = items.findIndex(item => item.id === active.id)
+      const newIndex = items.findIndex(item => item.id === over.id)
+      if (oldIndex !== -1 && newIndex !== -1) {
+        updateSection(section.id, { items: arrayMove(items, oldIndex, newIndex) })
+      }
+    }
+  }
+
   const addBadge = () => {
     const newBadge = {
+      id: Math.random().toString(36).substring(7),
       type: selectedType,
       label: BADGE_TYPES.find(b => b.type === selectedType)?.label || 'Badge',
       color: '58a6ff',
@@ -922,48 +1051,23 @@ const BadgesEditor = ({ section, updateSection }) => {
         </button>
       </div>
       <div className="grid gap-2.5">
-        {items.map((badge, index) => (
-          <div key={index} className="grid gap-2 rounded-lg border border-zinc-800 bg-zinc-950 p-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-400">{badge.type}</span>
-              <button
-                type="button"
-                onClick={() => removeBadge(index)}
-                className="flex h-6 w-6 items-center justify-center rounded-md border border-zinc-800 text-zinc-500 transition-all duration-150 hover:border-red-500 hover:text-red-500 cursor-pointer"
-              >
-                <Trash2 size={12} />
-              </button>
-            </div>
-            <input
-              className={inputClass}
-              value={badge.label ?? ''}
-              onChange={(e) => updateBadge(index, 'label', e.target.value)}
-              placeholder="Label"
-            />
-            {badge.type === 'custom' && (
-              <input
-                className={inputClass}
-                value={badge.message ?? ''}
-                onChange={(e) => updateBadge(index, 'message', e.target.value)}
-                placeholder="Message/Value"
-              />
-            )}
-            <div className="grid grid-cols-2 gap-2">
-              <ColorField label="Color" value={`#${badge.color ?? '58a6ff'}`} onChange={(v) => updateBadge(index, 'color', v.replace('#', ''))} />
-              <Field label="Style">
-                <select
-                  className={inputClass}
-                  value={badge.style ?? 'for-the-badge'}
-                  onChange={(e) => updateBadge(index, 'style', e.target.value)}
-                >
-                  {BADGE_STYLES.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </Field>
-            </div>
-          </div>
-        ))}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={items.map(b => b.id).filter(Boolean)} strategy={verticalListSortingStrategy}>
+            {items.map((badge, index) => {
+              if (!badge.id) return null
+              return (
+                <SortableBadge
+                  key={badge.id}
+                  id={badge.id}
+                  badge={badge}
+                  index={index}
+                  updateBadge={updateBadge}
+                  removeBadge={removeBadge}
+                />
+              )
+            })}
+          </SortableContext>
+        </DndContext>
       </div>
     </div>
   )
