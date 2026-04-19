@@ -380,7 +380,7 @@ const badgesBlock = (c) => {
       default:
         return `<img src="https://img.shields.io/static/v1?label=${encodeURIComponent(badge.label || 'Badge')}&message=${encodeURIComponent(badge.message || '')}&color=${color}&style=${style}" alt="${badge.label}" />`
     }
-  }).join(' ') // Space for badges instead of newline
+  }).join(' ')
   
   return buildAlignedBlock(align, badges)
 }
