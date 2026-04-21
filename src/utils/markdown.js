@@ -232,7 +232,7 @@ const indentBlock = (block, baseDepth = 1) => {
         depth = Math.max(0, depth - 1)
       }
 
-      const indented = `${'\t'.repeat(baseDepth + depth)}${trimmed}`
+      const indented = `${'  '.repeat(baseDepth + depth)}${trimmed}`
 
       const isOpeningTag = /^<([a-z][^/\s>]*)\b[^>]*>$/i.test(trimmed)
       const isSelfClosing = /\/>$/.test(trimmed)
@@ -247,7 +247,7 @@ const indentBlock = (block, baseDepth = 1) => {
 
 const buildAlignedBlock = (align, content) => [
   `<div align="${align}">`,
-  content, // Removed indentBlock call here to prevent whitespace issues in preview
+  indentBlock(content, 1),
   '</div>',
 ].join('\n')
 
@@ -380,7 +380,7 @@ const badgesBlock = (c) => {
       default:
         return `<img src="https://img.shields.io/static/v1?label=${encodeURIComponent(badge.label || 'Badge')}&message=${encodeURIComponent(badge.message || '')}&color=${color}&style=${style}" alt="${badge.label}" />`
     }
-  }).join(' ')
+  }).join('\n')
   
   return buildAlignedBlock(align, badges)
 }
@@ -397,7 +397,7 @@ const reposBlock = (c) => {
   const repoCards = repos.map((repo) => {
     const repoName = typeof repo === 'string' ? repo : repo.name
     return `<a href="https://github.com/${username}/${repoName}"><img src="https://github-readme-stats-delta-eight-12.vercel.app/api/pin/?username=${username}&repo=${repoName}&theme=${c.theme || 'dracula'}&hide_border=${c.hideBorder !== false}" alt="${repoName}" /></a>`
-  }).join(' ')
+  }).join('\n')
   
   return buildAlignedBlock(align, repoCards)
 }
@@ -457,9 +457,9 @@ const skillsBlock = (c) => {
       const img = `<img src="${src}" alt="${icon.title}" height="${iconSize}" />`
       return index < items.length - 1 && spacer ? `${img}${spacer}` : img
     })
-    .join('')
+    .join('\n')
 
-  return `<div align="${align}">${iconsContent}</div>`
+  return buildAlignedBlock(align, iconsContent)
 }
 
 const socialsBlock = (c) => {
@@ -484,12 +484,12 @@ const socialsBlock = (c) => {
       const icon = `<a href="${link.url}"><img src="${src}" alt="${label}" height="${iconSize}" /></a>`
       return index < iconLinks.length - 1 && spacer ? `${icon}${spacer}` : icon
     })
-    .join('')
+    .join('\n')
 
   const list = textLinks.map((l) => `- [${l.label}](${l.url})`).join('\n')
 
   const iconsBlock = iconsContent.length
-    ? `<div align="${align}">${iconsContent}</div>`
+    ? buildAlignedBlock(align, iconsContent)
     : ''
     
   if (iconsBlock && list) return `${iconsBlock}\n\n${list}`
