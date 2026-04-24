@@ -16,6 +16,7 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 - Fixed tech and social icon visibility and restored control over icon sizing and spacing.
 - Corrected layout issues where repository card spacing was not applying properly.
 - Enable mouse wheel scroll during template drag.
+- Add clean indentation to the markdown output.
 
 ## [0.1.0] - 2026-04-13
 
