@@ -15,7 +15,7 @@ const Home = () => {
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false)
 
   const projectUrl = 'https://github.com/BrandonBlkk/bran-readme'
-  const sponsorUrl = 'https://github.com/sponsors/BrandonBlkk'
+  const sponsorUrl = 'https://paypal.me/KyawZayarT?locale.x=en_GB&country.x=GB'
 
   return (
     <div className="flex min-h-screen overflow-y-auto bg-zinc-950 font-sans text-zinc-50 antialiased selection:bg-blue-500 selection:text-white lg:h-screen lg:overflow-hidden">
