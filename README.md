@@ -2,7 +2,7 @@
 
 BranReadme is a web app for building GitHub profile README files with drag-and-drop sections, live preview, and template sharing.
 
-<img width="1910" height="908" alt="image" src="https://github.com/user-attachments/assets/501dfd86-336d-4b6f-8786-b8a9759646b7" />
+<img width="1910" height="906" alt="image" src="https://github.com/user-attachments/assets/b57e6eff-1c88-420a-8fa1-00fd157053e2" />
 
 ## Features
 

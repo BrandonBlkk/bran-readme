@@ -1,11 +1,12 @@
 import React from 'react'
 
-const Toggle = ({ label, title, description, checked, onChange }) => {
-  const isDetailed = Boolean(description) || Boolean(title)
-  const displayTitle = title ?? label ?? ''
+const Toggle = ({ label, className = '', title, description, checked, onChange }) => {
+  const isDetailed = Boolean(description) || Boolean(title);
+  const displayTitle = title ?? label ?? '';
+
   const containerClass = isDetailed
-    ? 'flex w-full items-start gap-4 rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-left transition-all duration-150 hover:border-zinc-700 cursor-pointer'
-    : 'flex w-full items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-[13px] text-zinc-50 transition-colors duration-150 cursor-pointer'
+    ? `flex w-full items-start gap-4 rounded-xl col-span-2 border border-zinc-800 bg-zinc-950 p-4 text-left transition-all duration-150 hover:border-zinc-700 cursor-pointer ${className}`
+    : `flex w-full items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-[13px] text-zinc-50 transition-colors duration-150 cursor-pointer ${className}`;
   const switchClass = isDetailed
     ? `relative mt-0.5 inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-200 ${
         checked ? 'bg-blue-500' : 'bg-zinc-800'

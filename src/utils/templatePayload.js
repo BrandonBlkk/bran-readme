@@ -1,4 +1,5 @@
 import { BUILDER_STORE_KEY } from '../constants/templateFlow'
+import { normalizeGitStatsSections } from './gitStats'
 
 const isObject = (value) => value !== null && typeof value === 'object'
 
@@ -22,9 +23,10 @@ export const sanitizeTags = (input) => {
 
 export const normalizeTemplatePayload = (input) => {
   const payload = isObject(input) ? input : {}
-  const sections = Array.isArray(payload.sections)
+  const rawSections = Array.isArray(payload.sections)
     ? payload.sections.filter(isValidSection)
     : []
+  const sections = normalizeGitStatsSections(rawSections, { titleText: 'Git Stats' })
   const previewTheme = payload.previewTheme === 'light' ? 'light' : 'dark'
   return {
     sections,
