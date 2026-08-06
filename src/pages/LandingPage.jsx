@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react'
 import { getCurrentUser, signOut, onAuthStateChange } from '../services/authService'
 import AuthModal from '../components/auth/AuthModal'
 import FeedbackModal from '../components/feedback/FeedbackModal'
+import packageJson from '../../package.json'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 28 },
@@ -26,11 +27,13 @@ const stagger = {
 }
 
 const LandingPage = () => {
-    const [isBeta, setIsBeta] = useState(true);
+    const [isBeta, setIsBeta] = useState(false);
     const [isScrolling, setIsScrolling] = useState(false);
     const [user, setUser] = useState(null)
     const [isAuthOpen, setIsAuthOpen] = useState(false)
     const [isFeedbackOpen, setIsFeedbackOpen] = useState(false)
+
+    const version = packageJson.version || '0.1.0';
 
     useEffect(() => {
         getCurrentUser().then(setUser)
@@ -84,7 +87,7 @@ const LandingPage = () => {
                         Beta
                         </span> :
                         <span className="rounded-full border border-zinc-600 bg-zinc-900 px-2 py-0.5 text-[11px] font-medium text-zinc-400 select-none">
-                        v1.0
+                        v{version   }
                         </span>
                     }
                 </div>
